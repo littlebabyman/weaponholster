@@ -1,0 +1,13 @@
+{
+	"title"		:	"mighty foot engaged",
+	"type"		:	"weapon",
+	"tags"		:	[ "fun", "realism" ],
+	"ignore"	:
+	[
+		"*.psd",
+		"*.vcproj",
+		"*.svn*",
+		".gitattributes",
+		".git*"
+	]
+}
