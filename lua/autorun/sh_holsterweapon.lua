@@ -125,12 +125,6 @@ if SERVER then
     end)
 end
 
-hook.Add("PlayerSwitchWeapon", "PreventUnholster", function(ply)
-    if ply.InLadder && ply:GetActiveWeapon():GetClass() == holster then
-        return true
-    end
-end)
-
 hook.Add("StartCommand", "SimpleHolsterActionStop", function(ply, ucmd)
     if CLIENT && ply.Holstering then
         ucmd:RemoveKey(10241)
