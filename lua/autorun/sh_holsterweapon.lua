@@ -30,30 +30,34 @@ if CLIENT then
         -- local lastweapon = ply:GetPreviousWeapon() -- who knows, maybe i'll need this later
         local holsterweapon = ply:GetWeapon(holster)
         local based = (IsValid(weapon) && !(weapon.ArcCW || weapon.IsTFAWeapon || weapon.CW20Weapon || weapon.IsFAS2Weapon || (weapons.IsBasedOn(weapon:GetClass(), "weapon_hlaz_base") && GetConVar("hlaz_sv_holster"):GetBool())))
+        curtime = CurTime()
         local t = 0
         ply.Holstering = true
         net.Start("holstering", false)
         net.SendToServer()
         if IsValid(holsterweapon) then
-            if based && vm:SelectWeightedSequence(ACT_VM_HOLSTER) != -1 then
-                t = (ply:Ping() / 1000) + vm:SequenceDuration(vm:SelectWeightedSequence(ACT_VM_HOLSTER))
-                -- we're assuming the player's ping is stable here, so.
+            if based then
+                if vm:SelectWeightedSequence(ACT_VM_HOLSTER) != -1 then
+                    t = (ply:Ping() / 1000) + vm:SequenceDuration(vm:SelectWeightedSequence(ACT_VM_HOLSTER))
+                    vm:SetCycle(0)
+                    vm:SetPlaybackRate(1)
+                    -- we're assuming the player's ping is stable here, so.
+                end
             end
-                timer.Simple(t, function()
-                    if weapon == holsterweapon then
-                        if (ply:Alive() && IsValid(ply.HolsterWep)) then
-                            input.SelectWeapon(ply.HolsterWep)
-                        end
-                    else
-                --ply:PrintMessage(HUD_PRINTTALK, "holstering")
-                    ply.HolsterWep = weapon
-                        if (ply:Alive() && IsValid(holsterweapon)) then
-                            input.SelectWeapon(holsterweapon)
-                        end
+            timer.Simple(t, function()
+                if weapon == holsterweapon then
+                    if (ply:Alive() && IsValid(ply.HolsterWep)) then
+                        input.SelectWeapon(ply.HolsterWep)
                     end
-                    ply.Holstering = false
-                end)
-            -- ohohooh yeah thats a bit jank but it'll work for now and for the foreseeable future.
+                else
+            --ply:PrintMessage(HUD_PRINTTALK, "holstering")
+                ply.HolsterWep = weapon
+                    if (ply:Alive() && IsValid(holsterweapon)) then
+                        input.SelectWeapon(holsterweapon)
+                    end
+                end
+                ply.Holstering = false
+            end)
             -- print(t)
             -- print("Check success")
         else
@@ -72,25 +76,23 @@ if CLIENT then
             local weapon = ply:GetActiveWeapon()
             local holstered = weapon:GetClass() == holster
             local based = weapons.IsBasedOn(weapon:GetClass(), "mg_base") || weapons.IsBasedOn(weapon:GetClass(), "kf_zed_pill")
-            -- local based = (IsValid(weapon) && !(weapons.IsBasedOn(weapon:GetClass(), "arccw_base") || weapons.IsBasedOn(weapon:GetClass(), "tfa_gun_base")))
-            if (!ply.InLadder && holstered) || ply.Holstering || based then return end
-            -- check if player is both holding holster and not in ladder state or holstering or holding MW19 weapon
-            if ply:GetMoveType() == MOVETYPE_LADDER && !ply.InLadder && !holstered then
-            -- check if player is on a ladder and is not in ladder state and not holding holster
-                ply.InLadder = true
-                SimpleHolster()
-                if !IsValid(ply:GetWeapon(holster)) then
+            if (!ply.InLadder && holstered) || based then return end
+            -- check if player is both holding holster and not in ladder state or holstering or holding based weapon
+            timer.Simple(0, function()
+                if ply:GetMoveType() == MOVETYPE_LADDER && !ply.InLadder && !holstered then
+                -- check if player is on a ladder and is not in ladder state and not holding holster
+                    ply.InLadder = true
                     SimpleHolster()
-                end
-            else
-                if ply:GetMoveType() != MOVETYPE_LADDER && ply.InLadder && holstered && !ply.Holstering then
-                -- check if player is not on a ladder and is in ladder state and holding holster and not holstering
+                    if !IsValid(ply:GetWeapon(holster)) then
+                        SimpleHolster()
+                    end
+                elseif ply:GetMoveType() != MOVETYPE_LADDER && ply.InLadder && holstered then
+                    -- check if player is not on a ladder and is in ladder state and holding holster
                     ply.InLadder = false
                     SimpleHolster()
                 end
-            end
+            end)
         else
-            ply.InLadder = false
             return
         end
         -- print(ply.InLadder)
@@ -113,7 +115,9 @@ if SERVER then
             local based = (IsValid(weapon) && !(weapon.ArcCW || weapon.IsTFAWeapon || weapon.CW20Weapon || weapon.IsFAS2Weapon || (weapons.IsBasedOn(weapon:GetClass(), "weapon_hlaz_base") && GetConVar("hlaz_sv_holster"):GetBool())))
             if ply:HasWeapon(holster) then
                 if (based) then
+                    if ply:GetActiveWeapon():SelectWeightedSequence(ACT_VM_HOLSTER) != -1 then
                     ply:GetActiveWeapon():SendWeaponAnim(ACT_VM_HOLSTER)
+                    end
                 end -- multiplayer holster animations, needed in current implementation
             else
                 print("holster is invalid, giving new one to " .. ply:Nick())
@@ -125,12 +129,12 @@ if SERVER then
     end)
 end
 
-hook.Add("PlayerSwitchWeapon", "DisableLadderUnholstering", function(ply, oldwep, newwep)
+hook.Add("PlayerSwitchWeapon", "HolsterWeaponSwitchHook", function(ply, oldwep, newwep)
     if GetConVar("holsterweapon_ladders"):GetBool() && ply:GetMoveType() == MOVETYPE_LADDER && ply:GetActiveWeapon():GetClass() == holster then return true end
 end)
 
 hook.Add("StartCommand", "SimpleHolsterActionStop", function(ply, ucmd)
-    if CLIENT && ply.Holstering then
+    if CLIENT && ply:Alive() && ply.Holstering then
         ucmd:RemoveKey(10241)
     end
 end)

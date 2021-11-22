@@ -1,5 +1,5 @@
 {
-	"title"		:	"mighty foot engaged",
+	"title"		:	"Weapon holstering",
 	"type"		:	"weapon",
 	"tags"		:	[ "fun", "realism" ],
 	"ignore"	:
@@ -8,6 +8,8 @@
 		"*.vcproj",
 		"*.svn*",
 		".gitattributes",
-		".git*"
+		".git*",
+		"README.md",
+		"LICENSE"
 	]
 }
