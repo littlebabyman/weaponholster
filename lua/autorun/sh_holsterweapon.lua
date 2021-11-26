@@ -121,7 +121,7 @@ if SERVER then
 end
 
 hook.Add("PlayerSwitchWeapon", "HolsterWeaponSwitchHook", function(ply, oldwep, newwep)
-    print(oldwep, newwep)
+    -- print(oldwep, newwep)
     if GetConVar("holsterweapon_ladders"):GetBool() && ply:GetMoveType() == MOVETYPE_LADDER && ply:GetActiveWeapon():GetClass() == holster then return true end
 end)
 
