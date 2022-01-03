@@ -1,5 +1,6 @@
 CreateConVar("holsterweapon_ladders", 1, {FCVAR_ARCHIVE, FCVAR_NOTIFY, FCVAR_REPLICATED}, "Enable holstering your weapon on ladders.", 0, 1)
 CreateConVar("holsterweapon_weapon", "", {FCVAR_ARCHIVE, FCVAR_NOTIFY, FCVAR_REPLICATED}, "Weapon to holster to. Invalid weapon returns default holster. Requires restart to change.")
+CreateClientConVar("holsterweapon_key", 18, true)
 
 local holster = GetConVar("holsterweapon_weapon"):GetString()
 timer.Simple(0, function()
@@ -12,11 +13,11 @@ end)
 
 if CLIENT then
     hook.Add("PopulateToolMenu", "AddHolsterOptions", function()
-        spawnmenu.AddToolMenuOption("Utilities", "Admin", "SimpleHolsterOptions", "Simple Holster", "", "", function(DForm)
-            DForm:CheckBox("Enable ladder holstering", "holsterweapon_ladders")
-            DForm:TextEntry("Holstering weapon", "holsterweapon_weapon")
-            DForm:Help("Weapon classname to have as the ''the holster'', or leave blank for default (recommended). Requires map restart.")
-            DForm:ControlHelp("Right click a weapon and click ''copy to clipboard'' to get its classname.")
+        spawnmenu.AddToolMenuOption("Utilities", "Admin", "SimpleHolsterOptions", "Simple Holster", "", "", function(panel)
+            panel:CheckBox("Enable ladder holstering", "holsterweapon_ladders")
+            panel:TextEntry("Holstering weapon", "holsterweapon_weapon")
+            panel:Help("Weapon classname to have as the ''the holster'', or leave blank for default (recommended). Requires map restart.")
+            panel:ControlHelp("Right click a weapon and click ''copy to clipboard'' to get its classname.")
         end)
     end)
 
@@ -39,10 +40,8 @@ if CLIENT then
                 -- we're assuming the player's ping is stable here, so.
             end
             timer.Simple(t, function()
-                if weapon == holsterweapon then
-                    if (ply:Alive() && IsValid(ply.HolsterWep)) then
-                        input.SelectWeapon(ply.HolsterWep)
-                    end
+                if weapon == holsterweapon && (ply:Alive() && IsValid(ply.HolsterWep)) then
+                    input.SelectWeapon(ply.HolsterWep)
                 else
             --ply:PrintMessage(HUD_PRINTTALK, "holstering")
                 ply.HolsterWep = weapon
@@ -50,7 +49,9 @@ if CLIENT then
                         input.SelectWeapon(holsterweapon)
                     end
                 end
-                ply.Holstering = false
+                timer.Simple(0, function()
+                    ply.Holstering = false
+                end)
             end)
             -- print(t)
             -- print("Check success")
@@ -64,30 +65,25 @@ if CLIENT then
 
     concommand.Add("holsterweapon", SimpleHolster, nil, "Holster You're Weapon.")
 
+    hook.Add("PlayerButtonDown", "HolsterButton", function(ply, button)
+
+    end)
+
     hook.Add("Think", "HolsterThink", function()
         local ply = LocalPlayer()
         if !IsValid(ply) then return end
-        -- print(ply.Holstering)
         if (ply:Alive() && IsValid(ply:GetActiveWeapon()) && GetConVar("holsterweapon_ladders"):GetBool()) then
             local weapon = ply:GetActiveWeapon()
             local holstered = weapon:GetClass() == holster
             local based = weapons.IsBasedOn(weapon:GetClass(), "mg_base") || weapons.IsBasedOn(weapon:GetClass(), "kf_zed_pill")
             if (!ply.InLadder && holstered) || based then return end
-            -- check if player is both holding holster and not in ladder state or holstering or holding based weapon
-            timer.Simple(0, function()
-                if ply:GetMoveType() == MOVETYPE_LADDER && !ply.InLadder && !holstered && ply:GetVelocity().z != 0 then
-                -- check if player is on a ladder and is not in ladder state and not holding holster
-                    ply.InLadder = true
-                    SimpleHolster()
-                    if !IsValid(ply:GetWeapon(holster)) then
-                        SimpleHolster()
-                    end
-                elseif ply:GetMoveType() != MOVETYPE_LADDER && ply.InLadder && holstered then
-                    -- check if player is not on a ladder and is in ladder state and holding holster
-                    ply.InLadder = false
-                    SimpleHolster()
-                end
-            end)
+            if ply:GetMoveType() == MOVETYPE_LADDER && !ply.InLadder && !holstered && ply:GetVelocity().z != 0 then
+                SimpleHolster()
+                ply.InLadder = true
+            elseif ply:GetMoveType() != MOVETYPE_LADDER && ply.InLadder && holstered then
+                SimpleHolster()
+                ply.InLadder = false
+            end
         else return end
     end)
 
@@ -120,13 +116,15 @@ if SERVER then
     end)
 end
 
-hook.Add("PlayerSwitchWeapon", "HolsterWeaponSwitchHook", function(ply, oldwep, newwep)
-    -- print(oldwep, newwep)
-    if GetConVar("holsterweapon_ladders"):GetBool() && ply:GetMoveType() == MOVETYPE_LADDER && ply:GetActiveWeapon():GetClass() == holster then return true end
-end)
+if game.SinglePlayer() || CLIENT then
+    hook.Add("PlayerSwitchWeapon", "HolsterWeaponSwitchHook", function(ply, oldwep, newwep)
+        -- print(oldwep, newwep)
+        if GetConVar("holsterweapon_ladders"):GetBool() && ply:GetMoveType() == MOVETYPE_LADDER && ply:GetActiveWeapon():GetClass() == holster then return true end
+    end)
+end
 
 hook.Add("StartCommand", "SimpleHolsterActionStop", function(ply, ucmd)
-    if CLIENT && ply:Alive() && (ply.Holstering || ply.InLadder) then
+    if CLIENT && ply:Alive() && ply.Holstering then
         ucmd:RemoveKey(10241)
     end
 end)
