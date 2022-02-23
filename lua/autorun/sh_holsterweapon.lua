@@ -19,6 +19,7 @@ if CLIENT then
             panel:TextEntry("Holstering weapon", "holsterweapon_weapon")
             panel:Help("Weapon classname to have as the ''the holster'', or leave blank for default (recommended). Requires map restart.")
             panel:ControlHelp("Right click a weapon and click ''copy to clipboard'' to get its classname.")
+            panel:CheckBox("Enable ''backwards weapon draw''", "holsterweapon_undraw")
         end)
     end)
 
@@ -37,7 +38,6 @@ if CLIENT then
             if based then
                 if vm:SelectWeightedSequence(ACT_VM_HOLSTER) != -1 then
                     t = (ply:Ping() / 1000) + vm:SequenceDuration(vm:SelectWeightedSequence(ACT_VM_HOLSTER))
-                    vm:SetCycle(0)
                     vm:SetPlaybackRate(1)
                     -- we're assuming the player's ping is stable here, so.
                 else
@@ -46,7 +46,6 @@ if CLIENT then
                     else
                         t = (ply:Ping() / 1000) + vm:SequenceDuration(vm:SelectWeightedSequence(ACT_VM_DRAW)) / 2
                     end
-                    vm:SetCycle(0)
                     vm:SetPlaybackRate(-2)
                 end
             end
