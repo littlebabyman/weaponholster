@@ -76,10 +76,6 @@ if CLIENT then
 
     concommand.Add("holsterweapon", SimpleHolster, nil, "Holster You're Weapon.")
 
-    hook.Add("PlayerButtonDown", "HolsterButton", function(ply, button)
-
-    end)
-
     hook.Add("Think", "HolsterThink", function()
         local ply = LocalPlayer()
         if !IsValid(ply) then return end
