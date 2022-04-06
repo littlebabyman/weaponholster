@@ -29,7 +29,7 @@ if CLIENT then
         local weapon = ply:GetActiveWeapon()
         local vm = ply:GetViewModel()
         local holsterweapon = ply:GetWeapon(holster)
-        local based = (IsValid(weapon) && !(weapon.ArcCW || weapon.IsTFAWeapon || weapon.CW20Weapon || weapon.IsFAS2Weapon || (weapons.IsBasedOn(weapon:GetClass(), "weapon_hlaz_base") && GetConVar("hlaz_sv_holster"):GetBool())))
+        local based = (IsValid(weapon) && !(weapon.ArcCW || weapon.ARC9 || weapon.IsTFAWeapon || weapon.CW20Weapon || weapon.IsFAS2Weapon || weapon.IsUT99Weapon || weapons.IsBasedOn(weapon:GetClass(), "weapon_ss2_base") || weapons.IsBasedOn(weapon:GetClass(), "weapon_ut2004_base") || (weapons.IsBasedOn(weapon:GetClass(), "weapon_hlaz_base") && GetConVar("hlaz_sv_holster"):GetBool()) || (weapons.IsBasedOn(weapon:GetClass(), "weapon_ss_base") && GetConVar("ss_enableholsterdelay"):GetBool())))
         local t = 0
         net.Start("holstering", false)
         net.SendToServer()
@@ -38,7 +38,6 @@ if CLIENT then
             if based then
                 if vm:SelectWeightedSequence(ACT_VM_HOLSTER) != -1 then
                     t = (ply:Ping() / 1000) + vm:SequenceDuration(vm:SelectWeightedSequence(ACT_VM_HOLSTER))
-                    vm:SetPlaybackRate(1)
                     -- we're assuming the player's ping is stable here, so.
                 else
                     if vm:SelectWeightedSequence(ACT_SLAM_DETONATOR_THROW_DRAW) != -1 then
@@ -46,7 +45,6 @@ if CLIENT then
                     else
                         t = (ply:Ping() / 1000) + vm:SequenceDuration(vm:SelectWeightedSequence(ACT_VM_DRAW)) / 2
                     end
-                    vm:SetPlaybackRate(-2)
                 end
             end
             timer.Simple(t, function()
@@ -107,15 +105,19 @@ if SERVER then
     net.Receive("holstering", function(len, ply)
         if IsValid(ply) then
             local weapon = ply:GetActiveWeapon()
-            local based = (IsValid(weapon) && !(weapon.ArcCW || weapon.IsTFAWeapon || weapon.CW20Weapon || weapon.IsFAS2Weapon || (weapons.IsBasedOn(weapon:GetClass(), "weapon_hlaz_base") && GetConVar("hlaz_sv_holster"):GetBool())))
+            local based = (IsValid(weapon) && !(weapon.ArcCW || weapon.ARC9 || weapon.IsTFAWeapon || weapon.CW20Weapon || weapon.IsFAS2Weapon || weapon.IsUT99Weapon || weapons.IsBasedOn(weapon:GetClass(), "weapon_ss2_base") || weapons.IsBasedOn(weapon:GetClass(), "weapon_ut2004_base") || (weapons.IsBasedOn(weapon:GetClass(), "weapon_hlaz_base") && GetConVar("hlaz_sv_holster"):GetBool()) || (weapons.IsBasedOn(weapon:GetClass(), "weapon_ss_base") && GetConVar("ss_enableholsterdelay"):GetBool())))
             if ply:HasWeapon(holster) then
                 if based then
                     if weapon:SelectWeightedSequence(ACT_VM_HOLSTER) != -1 then
                         weapon:SendWeaponAnim(ACT_VM_HOLSTER)
-                    elseif weapon:GetClass() == "weapon_slam" then
-                        weapon:SendWeaponAnim(ACT_SLAM_DETONATOR_THROW_DRAW)
+                        ply:GetViewModel():SetPlaybackRate(1)
                     else
-                        weapon:SendWeaponAnim(ACT_VM_DRAW)
+                        if weapon:GetClass() == "weapon_slam" then
+                            weapon:SendWeaponAnim(ACT_SLAM_DETONATOR_THROW_DRAW)
+                        else
+                            weapon:SendWeaponAnim(ACT_VM_DRAW)
+                        end
+                        ply:GetViewModel():SetPlaybackRate(-2)
                     end
                 end -- multiplayer holster animations, needed in current implementation
             else
