@@ -22,6 +22,8 @@ if CLIENT then
             panel:CheckBox("Enable ''backwards weapon draw''", "holsterweapon_undraw")
         end)
     end)
+    LocalPlayer().SHolstering = false
+    LocalPlayer().InLadder = false
 
     function SimpleHolster()
         local ply = LocalPlayer()
