@@ -8,7 +8,11 @@ timer.Simple(0, function()
     if engine.ActiveGamemode() == "terrortown" then
         holster = "weapon_ttt_unarmed"
     elseif !list.HasEntry("Weapon",holster) then
-        holster = "weaponholster"
+        if list.HasEntry("Weapon","apexswep") then
+            holster = "apexswep"
+        else
+            holster = "weaponholster"
+        end
     end
 end)
 
