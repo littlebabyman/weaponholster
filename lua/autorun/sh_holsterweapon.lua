@@ -22,12 +22,10 @@ if CLIENT then
             panel:CheckBox("Enable ''backwards weapon draw''", "holsterweapon_undraw")
         end)
     end)
-    LocalPlayer().SHolstering = false
-    LocalPlayer().InLadder = false
 
     function SimpleHolster()
         local ply = LocalPlayer()
-        if (!ply:Alive() || ply.SHolstering) then return end
+        if (!ply:Alive() || ply.Holstering) then return end
         local weapon = ply:GetActiveWeapon()
         local vm = ply:GetViewModel()
         local holsterweapon = ply:GetWeapon(holster)
@@ -36,7 +34,7 @@ if CLIENT then
         net.Start("holstering", false)
         net.SendToServer()
         if IsValid(holsterweapon) then
-            ply.SHolstering = true
+            ply.Holstering = true
             if based then
                 if vm:SelectWeightedSequence(ACT_VM_HOLSTER) != -1 then
                     t = (ply:Ping() / 1000) + vm:SequenceDuration(vm:SelectWeightedSequence(ACT_VM_HOLSTER))
@@ -60,14 +58,14 @@ if CLIENT then
                     end
                 end
                 timer.Simple(0, function()
-                    ply.SHolstering = false
+                    ply.Holstering = false
                 end)
             end)
             -- print(t)
             -- print("Check success")
             return true
         else
-            ply.SHolstering = false
+            ply.Holstering = false
             --print("Check failure, holster given!")
             return false
         end
@@ -140,7 +138,7 @@ if game.SinglePlayer() || CLIENT then
 end
 
 hook.Add("StartCommand", "SimpleHolsterActionStop", function(ply, ucmd)
-    if CLIENT && ply:Alive() && ply.SHolstering then
+    if CLIENT && ply:Alive() && ply.Holstering then
         ucmd:RemoveKey(10241)
     end
 end)
