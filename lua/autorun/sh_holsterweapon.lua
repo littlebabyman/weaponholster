@@ -77,6 +77,10 @@ if CLIENT then
 
     concommand.Add("holsterweapon", SimpleHolster, nil, "Holster You're Weapon.")
 
+    hook.Add("PlayerBindPress", "SimpleHolsterSlot0", function(ply, bind, pressed, code)
+        if bind == "slot0" && !input.LookupBinding("holsterweapon", true) then SimpleHolster() end
+    end)
+
     hook.Add("Think", "HolsterThink", function()
         local ply = LocalPlayer()
         if !IsValid(ply) then return end
@@ -86,6 +90,11 @@ if CLIENT then
             local based = weapons.IsBasedOn(weapon:GetClass(), "mg_base") || weapons.IsBasedOn(weapon:GetClass(), "kf_zed_pill")
             if (!ply.InLadder && holstered) || based then return end
             if ply:GetMoveType() == MOVETYPE_LADDER && !ply.InLadder && !holstered && ply:GetVelocity().z != 0 then
+                if !ply:HasWeapon(holster) then
+                    timer.Simple(0, function()
+                        SimpleHolster()
+                    end)
+                end
                 SimpleHolster()
                 ply.InLadder = true
             elseif ply:GetMoveType() != MOVETYPE_LADDER && ply.InLadder && holstered then
