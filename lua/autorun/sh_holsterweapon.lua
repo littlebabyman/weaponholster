@@ -1,4 +1,4 @@
-CreateConVar("holsterweapon_ladders", 1, {FCVAR_ARCHIVE, FCVAR_NOTIFY, FCVAR_REPLICATED}, "Enable holstering your weapon on ladders.", 0, 1)
+CreateConVar("holsterweapon_ladders", 1, {FCVAR_ARCHIVE, FCVAR_NOTIFY, FCVAR_REPLICATED}, "Enable holstering your weapon on ladders.", 0, 2)
 CreateConVar("holsterweapon_undraw", 1, {FCVAR_ARCHIVE, FCVAR_NOTIFY, FCVAR_REPLICATED}, "Allow playing weapon draw animation backwards, as a fallback.", 0, 1)
 CreateConVar("holsterweapon_weapon", "", {FCVAR_ARCHIVE, FCVAR_NOTIFY, FCVAR_REPLICATED}, "Weapon to holster to. Invalid weapon returns default holster. Requires restart to change.")
 CreateClientConVar("holsterweapon_key", 18, true)
@@ -19,7 +19,11 @@ end)
 if CLIENT then
     hook.Add("PopulateToolMenu", "AddHolsterOptions", function()
         spawnmenu.AddToolMenuOption("Utilities", "Admin", "SimpleHolsterOptions", "Simple Holster", "", "", function(panel)
-            panel:CheckBox("Enable ladder holstering", "holsterweapon_ladders")
+            local ladders = panel:ComboBox("Holstering in ladders", "holsterweapon_ladders")
+            ladders:SetSortItems(false)
+            ladders:AddChoice("Disabled", 0)
+            ladders:AddChoice("Holster normally", 1)
+            ladders:AddChoice("Holster instantly", 2)
             panel:TextEntry("Holstering weapon", "holsterweapon_weapon")
             panel:Help("Weapon classname to have as the ''the holster'', or leave blank for default (recommended). Requires map restart.")
             panel:ControlHelp("Right click a weapon and click ''copy to clipboard'' to get its classname.")
@@ -78,23 +82,19 @@ if CLIENT then
     concommand.Add("holsterweapon", SimpleHolster, nil, "Holster You're Weapon.")
 
     hook.Add("PlayerBindPress", "SimpleHolsterSlot0", function(ply, bind, pressed, code)
-        if bind == "slot0" && !input.LookupBinding("holsterweapon", true) then SimpleHolster() end
+        if bind == "slot0" && !input.LookupBinding("holsterweapon") then SimpleHolster() end
     end)
 
     hook.Add("Think", "HolsterThink", function()
         local ply = LocalPlayer()
         if !IsValid(ply) then return end
+        -- print(ply:GetActiveWeapon())
         if (ply:Alive() && IsValid(ply:GetActiveWeapon()) && GetConVar("holsterweapon_ladders"):GetBool()) then
             local weapon = ply:GetActiveWeapon()
             local holstered = weapon:GetClass() == holster
             local based = weapons.IsBasedOn(weapon:GetClass(), "mg_base") || weapons.IsBasedOn(weapon:GetClass(), "kf_zed_pill")
             if (!ply.InLadder && holstered) || based then return end
             if ply:GetMoveType() == MOVETYPE_LADDER && !ply.InLadder && !holstered && ply:GetVelocity().z != 0 then
-                if !ply:HasWeapon(holster) then
-                    timer.Simple(0, function()
-                        SimpleHolster()
-                    end)
-                end
                 SimpleHolster()
                 ply.InLadder = true
             elseif ply:GetMoveType() != MOVETYPE_LADDER && ply.InLadder && holstered then
@@ -114,39 +114,50 @@ if SERVER then
             ply:Give(holster, true)
         end)
     end
-
-    net.Receive("holstering", function(len, ply)
+    function DoWeaponHolstering(ply)
         if IsValid(ply) then
             local weapon = ply:GetActiveWeapon()
             local based = (IsValid(weapon) && !(weapon.ArcCW || weapon.ARC9 || weapon.IsTFAWeapon || weapon.CW20Weapon || weapon.IsFAS2Weapon || weapon.IsUT99Weapon || weapons.IsBasedOn(weapon:GetClass(), "weapon_ss2_base") || weapons.IsBasedOn(weapon:GetClass(), "weapon_ut2004_base") || (weapons.IsBasedOn(weapon:GetClass(), "weapon_hlaz_base") && GetConVar("hlaz_sv_holster"):GetBool()) || (weapons.IsBasedOn(weapon:GetClass(), "weapon_ss_base") && GetConVar("ss_enableholsterdelay"):GetBool())))
+            if !ply:HasWeapon(holster) then
+                -- print("holster is invalid, giving new one to " .. ply:Nick())
+                ply:Give(holster, true)
+            end
             if ply:HasWeapon(holster) then
-                if based then
-                    if weapon:SelectWeightedSequence(ACT_VM_HOLSTER) != -1 then
-                        weapon:SendWeaponAnim(ACT_VM_HOLSTER)
-                        ply:GetViewModel():SetPlaybackRate(1)
-                    else
-                        if weapon:GetClass() == "weapon_slam" then
-                            weapon:SendWeaponAnim(ACT_SLAM_DETONATOR_THROW_DRAW)
+                timer.Simple(0, function()
+                    if GetConVar("holsterweapon_ladders"):GetInt() == 2 && ply:GetMoveType() == MOVETYPE_LADDER then
+                        ply:SetActiveWeapon(NULL)
+                        ply:SelectWeapon(holster)
+                    elseif based then
+                        if weapon:SelectWeightedSequence(ACT_VM_HOLSTER) != -1 then
+                            weapon:SendWeaponAnim(ACT_VM_HOLSTER)
+                            ply:GetViewModel():SetPlaybackRate(1)
                         else
-                            weapon:SendWeaponAnim(ACT_VM_DRAW)
+                            if weapon:GetClass() == "weapon_slam" then
+                                weapon:SendWeaponAnim(ACT_SLAM_DETONATOR_THROW_DRAW)
+                            else
+                                weapon:SendWeaponAnim(ACT_VM_DRAW)
+                            end
+                            ply:GetViewModel():SetPlaybackRate(-2)
                         end
-                        ply:GetViewModel():SetPlaybackRate(-2)
-                    end
-                end -- multiplayer holster animations, needed in current implementation
+                    end -- multiplayer holster animations, needed in current implementation
+                end)
             else
-                print("holster is invalid, giving new one to " .. ply:Nick())
+                print("why is holster still invalid for " .. ply:Nick() .. " for fuck's sake")
                 ply:Give(holster, true)
                 --else
                 --print("holster is valid")
             end
         end
+    end
+    net.Receive("holstering", function(len, ply)
+        DoWeaponHolstering(ply)
     end)
 end
 
 if game.SinglePlayer() || CLIENT then
     hook.Add("PlayerSwitchWeapon", "HolsterWeaponSwitchHook", function(ply, oldwep, newwep)
         -- print(oldwep, newwep)
-        if GetConVar("holsterweapon_ladders"):GetBool() && ply:GetMoveType() == MOVETYPE_LADDER && ply:GetActiveWeapon():GetClass() == holster then return true end
+        if IsValid(oldwep) && GetConVar("holsterweapon_ladders"):GetBool() && ply:GetMoveType() == MOVETYPE_LADDER && ply:GetActiveWeapon():GetClass() == holster then return true end
     end)
 end
 
