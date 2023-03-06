@@ -33,50 +33,40 @@ if CLIENT then
 
     function SimpleHolster()
         local ply = LocalPlayer()
-        if (!ply:Alive() || ply.Holstering) then return end
+        if !ply:Alive() || ply.Holstering then return end
         local weapon = ply:GetActiveWeapon()
         local vm = ply:GetViewModel()
         local holsterweapon = ply:GetWeapon(holster)
-        local based = (IsValid(weapon) && !(weapon.ArcCW || weapon.ARC9 || weapon.IsTFAWeapon || weapon.CW20Weapon || weapon.IsFAS2Weapon || weapon.IsUT99Weapon || weapons.IsBasedOn(weapon:GetClass(), "weapon_ss2_base") || weapons.IsBasedOn(weapon:GetClass(), "weapon_ut2004_base") || (weapons.IsBasedOn(weapon:GetClass(), "weapon_hlaz_base") && GetConVar("hlaz_sv_holster"):GetBool()) || (weapons.IsBasedOn(weapon:GetClass(), "weapon_ss_base") && GetConVar("ss_enableholsterdelay"):GetBool())))
+        local based = IsValid(weapon) && !(weapon.ArcCW || weapon.ARC9 || weapon.IsTFAWeapon || weapon.CW20Weapon || weapon.IsFAS2Weapon || weapon.IsUT99Weapon || weapons.IsBasedOn(weapon:GetClass(), "weapon_ss2_base") || weapons.IsBasedOn(weapon:GetClass(), "weapon_ut2004_base") || (weapons.IsBasedOn(weapon:GetClass(), "weapon_hlaz_base") && GetConVar("hlaz_sv_holster"):GetBool()) || (weapons.IsBasedOn(weapon:GetClass(), "weapon_ss_base") && GetConVar("ss_enableholsterdelay"):GetBool()))
         local t = 0
-        net.Start("holstering", false)
-        net.SendToServer()
-        if IsValid(holsterweapon) then
-            ply.Holstering = true
-            if based then
-                if vm:SelectWeightedSequence(ACT_VM_HOLSTER) != -1 then
-                    t = (ply:Ping() / 1000) + vm:SequenceDuration(vm:SelectWeightedSequence(ACT_VM_HOLSTER))
-                    -- we're assuming the player's ping is stable here, so.
+        ply.Holstering = true
+        print(based)
+        if based then
+            if vm:SelectWeightedSequence(ACT_VM_HOLSTER) != -1 then
+                t = (ply:Ping() * 0.001) + vm:SequenceDuration(vm:SelectWeightedSequence(ACT_VM_HOLSTER))
+                -- we're assuming the player's ping is stable here, so.
+            else
+                if vm:SelectWeightedSequence(ACT_SLAM_DETONATOR_THROW_DRAW) != -1 then
+                    t = (ply:Ping() * 0.001) + vm:SequenceDuration(vm:SelectWeightedSequence(ACT_SLAM_DETONATOR_THROW_DRAW)) * 0.5
                 else
-                    if vm:SelectWeightedSequence(ACT_SLAM_DETONATOR_THROW_DRAW) != -1 then
-                        t = (ply:Ping() / 1000) + vm:SequenceDuration(vm:SelectWeightedSequence(ACT_SLAM_DETONATOR_THROW_DRAW)) / 2
-                    else
-                        t = (ply:Ping() / 1000) + vm:SequenceDuration(vm:SelectWeightedSequence(ACT_VM_DRAW)) / 2
-                    end
+                    t = (ply:Ping() * 0.001) + vm:SequenceDuration(vm:SelectWeightedSequence(ACT_VM_DRAW)) * 0.5
                 end
             end
-            timer.Simple(t, function()
-                if weapon == holsterweapon && (ply:Alive() && IsValid(ply.HolsterWep)) then
-                    input.SelectWeapon(ply.HolsterWep)
-                else
-            --ply:PrintMessage(HUD_PRINTTALK, "holstering")
-                ply.HolsterWep = weapon
-                    if (ply:Alive() && IsValid(holsterweapon)) then
-                        input.SelectWeapon(holsterweapon)
-                    end
-                end
-                timer.Simple(0, function()
-                    ply.Holstering = false
-                end)
-            end)
-            -- print(t)
-            -- print("Check success")
-            return true
-        else
-            ply.Holstering = false
-            --print("Check failure, holster given!")
-            return false
         end
+        timer.Simple(t, function()
+            if weapon == holsterweapon && (ply:Alive() && IsValid(ply.HolsterWep)) then
+                input.SelectWeapon(ply.HolsterWep)
+            else
+                ply.HolsterWep = weapon
+                if (ply:Alive() && IsValid(holsterweapon)) then
+                    input.SelectWeapon(holsterweapon)
+                end
+            end
+            ply.Holstering = false
+        end)
+        net.Start("holstering", false)
+        net.WriteFloat(t)
+        net.SendToServer()
     end
 
     concommand.Add("holsterweapon", SimpleHolster, nil, "Holster You're Weapon.")
@@ -87,9 +77,7 @@ if CLIENT then
 
     hook.Add("Think", "HolsterThink", function()
         local ply = LocalPlayer()
-        if !IsValid(ply) then return end
-        -- print(ply:GetActiveWeapon())
-        if (ply:Alive() && IsValid(ply:GetActiveWeapon()) && GetConVar("holsterweapon_ladders"):GetBool()) then
+        if IsValid(ply) && (ply:Alive() && IsValid(ply:GetActiveWeapon()) && GetConVar("holsterweapon_ladders"):GetBool()) then
             local weapon = ply:GetActiveWeapon()
             local holstered = weapon:GetClass() == holster
             local based = weapons.IsBasedOn(weapon:GetClass(), "mg_base") || weapons.IsBasedOn(weapon:GetClass(), "kf_zed_pill")
@@ -101,7 +89,7 @@ if CLIENT then
                 SimpleHolster()
                 ply.InLadder = false
             end
-        else return end
+        end
     end)
 
 end
@@ -114,50 +102,43 @@ if SERVER then
             ply:Give(holster, true)
         end)
     end
-    function DoWeaponHolstering(ply)
-        if IsValid(ply) then
-            local weapon = ply:GetActiveWeapon()
-            local based = (IsValid(weapon) && !(weapon.ArcCW || weapon.ARC9 || weapon.IsTFAWeapon || weapon.CW20Weapon || weapon.IsFAS2Weapon || weapon.IsUT99Weapon || weapons.IsBasedOn(weapon:GetClass(), "weapon_ss2_base") || weapons.IsBasedOn(weapon:GetClass(), "weapon_ut2004_base") || (weapons.IsBasedOn(weapon:GetClass(), "weapon_hlaz_base") && GetConVar("hlaz_sv_holster"):GetBool()) || (weapons.IsBasedOn(weapon:GetClass(), "weapon_ss_base") && GetConVar("ss_enableholsterdelay"):GetBool())))
-            if !ply:HasWeapon(holster) then
-                -- print("holster is invalid, giving new one to " .. ply:Nick())
-                ply:Give(holster, true)
-            end
-            if ply:HasWeapon(holster) then
-                timer.Simple(0, function()
-                    if GetConVar("holsterweapon_ladders"):GetInt() == 2 && ply:GetMoveType() == MOVETYPE_LADDER then
-                        ply:SetActiveWeapon(NULL)
-                        ply:SelectWeapon(holster)
-                    elseif based then
-                        if weapon:SelectWeightedSequence(ACT_VM_HOLSTER) != -1 then
-                            weapon:SendWeaponAnim(ACT_VM_HOLSTER)
-                            ply:GetViewModel():SetPlaybackRate(1)
-                        else
-                            if weapon:GetClass() == "weapon_slam" then
-                                weapon:SendWeaponAnim(ACT_SLAM_DETONATOR_THROW_DRAW)
-                            else
-                                weapon:SendWeaponAnim(ACT_VM_DRAW)
-                            end
-                            ply:GetViewModel():SetPlaybackRate(-2)
-                        end
-                    end -- multiplayer holster animations, needed in current implementation
-                end)
-            else
-                print("why is holster still invalid for " .. ply:Nick() .. " for fuck's sake")
-                ply:Give(holster, true)
-                --else
-                --print("holster is valid")
-            end
+    
+    function DoWeaponHolstering(ply, t)
+        if !IsValid(ply) then return end
+        local weapon = ply:GetActiveWeapon()
+        if !ply:HasWeapon(holster) then
+            -- print("holster is invalid, giving new one to " .. ply:Nick())
+            ply:Give(holster, true)
+            timer.Simple(t, function() ply:SelectWeapon(holster) end)
         end
+        if GetConVar("holsterweapon_ladders"):GetInt() == 2 && ply:GetMoveType() == MOVETYPE_LADDER then
+            ply:SetActiveWeapon(NULL)
+            ply:SelectWeapon(holster)
+        elseif t != 0 then
+            if weapon:SelectWeightedSequence(ACT_VM_HOLSTER) != -1 then
+                weapon:SendWeaponAnim(ACT_VM_HOLSTER)
+                ply:GetViewModel():SetPlaybackRate(1)
+            else
+                if weapon:GetClass() == "weapon_slam" then
+                    weapon:SendWeaponAnim(ACT_SLAM_DETONATOR_THROW_DRAW)
+                else
+                    weapon:SendWeaponAnim(ACT_VM_DRAW)
+                end
+                ply:GetViewModel():SetPlaybackRate(-2)
+            end
+        end -- multiplayer holster animations, needed in current implementation
     end
+
     net.Receive("holstering", function(len, ply)
-        DoWeaponHolstering(ply)
+        DoWeaponHolstering(ply, net.ReadFloat())
     end)
 end
 
 if game.SinglePlayer() || CLIENT then
     hook.Add("PlayerSwitchWeapon", "HolsterWeaponSwitchHook", function(ply, oldwep, newwep)
-        -- print(oldwep, newwep)
-        if IsValid(oldwep) && GetConVar("holsterweapon_ladders"):GetBool() && ply:GetMoveType() == MOVETYPE_LADDER && ply:GetActiveWeapon():GetClass() == holster then return true end
+        if IsValid(oldwep) && GetConVar("holsterweapon_ladders"):GetBool() && ply:GetMoveType() == MOVETYPE_LADDER && ply:GetActiveWeapon():GetClass() == holster then
+            return true
+        end
     end)
 end
 
