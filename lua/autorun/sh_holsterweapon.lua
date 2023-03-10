@@ -40,7 +40,6 @@ if CLIENT then
         local based = IsValid(weapon) && !(weapon.ArcCW || weapon.ARC9 || weapon.IsTFAWeapon || weapon.CW20Weapon || weapon.IsFAS2Weapon || weapon.IsUT99Weapon || weapons.IsBasedOn(weapon:GetClass(), "weapon_ss2_base") || weapons.IsBasedOn(weapon:GetClass(), "weapon_ut2004_base") || (weapons.IsBasedOn(weapon:GetClass(), "weapon_hlaz_base") && GetConVar("hlaz_sv_holster"):GetBool()) || (weapons.IsBasedOn(weapon:GetClass(), "weapon_ss_base") && GetConVar("ss_enableholsterdelay"):GetBool()))
         local t = 0
         ply.Holstering = true
-        print(based)
         if based then
             if vm:SelectWeightedSequence(ACT_VM_HOLSTER) != -1 then
                 t = (ply:Ping() * 0.001) + vm:SequenceDuration(vm:SelectWeightedSequence(ACT_VM_HOLSTER))
