@@ -1,21 +1,10 @@
 local CVarFlags = {FCVAR_ARCHIVE, FCVAR_NOTIFY, FCVAR_REPLICATED}
 local LadderCVar = CreateConVar("holsterweapon_ladders", 1, CVarFlags, "Enable holstering your weapon on ladders.", 0, 2)
 local UndrawCVar = CreateConVar("holsterweapon_undraw", 1, CVarFlags, "Allow playing weapon draw animation backwards, as a fallback.", 0, 1)
-local WeaponCVar = CreateConVar("holsterweapon_weapon", "", CVarFlags, "Weapon to holster to. Invalid weapon returns default holster. Requires restart to change.")
+local WeaponCVar = CreateConVar("holsterweapon_weapon", "", CVarFlags, "Weapon to holster to. Invalid weapon returns default holster. Will remove previous holster-weapon on change.")
 local BindCVar = CreateClientConVar("holsterweapon_key", 18, true)
-local holster = WeaponCVar:GetString()
+local holster = (list.HasEntry("Weapon",WeaponCVar:GetString()) && WeaponCVar:GetString()) || (list.HasEntry("Weapon","apexswep") && "apexswep") || "weaponholster"
 
-timer.Simple(0, function()
-    if engine.ActiveGamemode() == "terrortown" then
-        holster = "weapon_ttt_unarmed"
-    elseif !list.HasEntry("Weapon",holster) then
-        if list.HasEntry("Weapon","apexswep") then
-            holster = "apexswep"
-        else
-            holster = "weaponholster"
-        end
-    end
-end)
 
 if CLIENT then
     hook.Add("PopulateToolMenu", "AddHolsterOptions", function()
@@ -80,6 +69,10 @@ if CLIENT then
         net.SendToServer()
     end
 
+    net.Receive("holstering", function()
+        holster = net.ReadString()
+    end)
+
     concommand.Add("holsterweapon", SimpleHolster, nil, "Holster You're Weapon.")
 
     hook.Add("PlayerBindPress", "SimpleHolsterSlot0", function(ply, bind, pressed, code)
@@ -107,12 +100,38 @@ end
 if SERVER then
     util.AddNetworkString("holstering")
 
+    local function SetupHolsterWeapon()
+        local oldwep = holster
+        if engine.ActiveGamemode() == "terrortown" then
+            holster = "weapon_ttt_unarmed"
+        else
+            holster = (list.HasEntry("Weapon",WeaponCVar:GetString()) && WeaponCVar:GetString()) || (list.HasEntry("Weapon","apexswep") && "apexswep") || "weaponholster"
+        end
+        if oldwep == holster then return end
+        for num, ply in ipairs(player.GetAll()) do
+            ply:Give(holster)
+            if ply:GetActiveWeapon():GetClass() == oldwep && ply:GetWeapon(holster):IsWeapon() then
+                ply:SetActiveWeapon(NULL)
+                ply:SelectWeapon(ply:GetWeapon(holster))
+            end
+            ply:StripWeapon(oldwep)
+        end
+        net.Start("holstering", false)
+        net.WriteString(holster)
+        net.Broadcast()
+    end
+
+    hook.Add("Initialize", "SetHolsterWeapon", SetupHolsterWeapon)
+    cvars.AddChangeCallback("holsterweapon_weapon", SetupHolsterWeapon)
+
     if engine.ActiveGamemode() != "terrortown" then
         hook.Add("PlayerLoadout", "GiveHolster", function(ply)
-            ply:Give(holster, true)
+            timer.Simple(0, function()
+                ply:Give(holster, true)
+            end)
         end)
     end
-    
+
     function DoWeaponHolstering(ply, t)
         if !IsValid(ply) then return end
         local weapon = ply:GetActiveWeapon()
