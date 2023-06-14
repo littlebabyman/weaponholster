@@ -81,7 +81,8 @@ if CLIENT then
 
     hook.Add("Think", "HolsterThink", function()
         local ply = LocalPlayer()
-        if IsValid(ply) && (ply:Alive() && IsValid(ply:GetActiveWeapon()) && LadderCVar:GetBool()) then
+        if !IsValid(ply) then return end
+        if (ply:Alive() && IsValid(ply:GetActiveWeapon()) && LadderCVar:GetBool()) then
             local weapon = ply:GetActiveWeapon()
             local holstered = weapon:GetClass() == holster
             local based = weapons.IsBasedOn(weapon:GetClass(), "mg_base") || weapons.IsBasedOn(weapon:GetClass(), "kf_zed_pill")
@@ -93,6 +94,8 @@ if CLIENT then
                 SimpleHolster()
                 ply.InLadder = false
             end
+        elseif ply.InLadder then
+            ply.InLadder = false
         end
     end)
 end
