@@ -3,7 +3,7 @@ local LadderCVar = CreateConVar("holsterweapon_ladders", 1, CVarFlags, "Enable h
 local UndrawCVar = CreateConVar("holsterweapon_undraw", 1, CVarFlags, "Allow playing weapon draw animation backwards, as a fallback.", 0, 1)
 local WeaponCVar = CreateConVar("holsterweapon_weapon", "", CVarFlags, "Weapon to holster to. Invalid weapon returns default holster. Will remove previous holster-weapon on change.")
 local BindCVar = CreateClientConVar("holsterweapon_key", 18, true)
-local holster = (list.HasEntry("Weapon",WeaponCVar:GetString()) && WeaponCVar:GetString()) || (list.HasEntry("Weapon","apexswep") && "apexswep") || "weaponholster"
+local holster = "weaponholster"
 
 
 if CLIENT then
@@ -69,7 +69,7 @@ if CLIENT then
         net.SendToServer()
     end
 
-    net.Receive("holstering", function()
+    net.Receive("sendholster", function()
         holster = net.ReadString()
     end)
 
@@ -99,6 +99,13 @@ end
 
 if SERVER then
     util.AddNetworkString("holstering")
+    util.AddNetworkString("sendholster")
+
+    local function SendHolster(data)
+        net.Start("sendholster", false)
+        net.WriteString(holster)
+        net.Send(Player(data.userid))
+    end
 
     local function SetupHolsterWeapon()
         local oldwep = holster
@@ -116,13 +123,15 @@ if SERVER then
             end
             ply:StripWeapon(oldwep)
         end
-        net.Start("holstering", false)
+        net.Start("sendholster", false)
         net.WriteString(holster)
         net.Broadcast()
     end
 
-    hook.Add("Initialize", "SetHolsterWeapon", SetupHolsterWeapon)
+    hook.Add("InitPostEntity", "SetHolsterWeapon", SetupHolsterWeapon)
     cvars.AddChangeCallback("holsterweapon_weapon", SetupHolsterWeapon)
+    gameevent.Listen("player_activate")
+    hook.Add("player_activate", "SetHolsterWeapon", SendHolster)
 
     if engine.ActiveGamemode() != "terrortown" then
         hook.Add("PlayerLoadout", "GiveHolster", function(ply)
@@ -172,7 +181,7 @@ if game.SinglePlayer() || CLIENT then
 end
 
 hook.Add("StartCommand", "SimpleHolsterActionStop", function(ply, ucmd)
-    if CLIENT && ply:Alive() && ply.Holstering then
-        ucmd:RemoveKey(10241)
+    if ply:Alive() && ply.Holstering then
+        ucmd:SetButtons(bit.band(ucmd:GetButtons(), bit.bnot(10241)))
     end
 end)
