@@ -29,7 +29,7 @@ function SWEP:Initialize()
 end
 
 function SWEP:Deploy()
-    local vm = self.Owner:GetViewModel()
+    local vm = self:GetOwner():GetViewModel()
     vm:SendViewModelMatchingSequence(vm:LookupSequence("seq_deploy"))
     vm:SetPlaybackRate(0)
     vm:SetCycle(0)
@@ -43,6 +43,10 @@ function SWEP:PrimaryAttack()
 end
 
 function SWEP:SecondaryAttack()
+    if game.SinglePlayer() and SERVER then self:CallOnClient("SecondaryAttack")
+    elseif CLIENT then
+        self.DrawCrosshair = !self.DrawCrosshair
+    end
 end
 
 function SWEP:DrawWeaponSelection()
