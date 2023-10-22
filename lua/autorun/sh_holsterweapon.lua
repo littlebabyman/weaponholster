@@ -2,11 +2,12 @@ local CVarFlags = {FCVAR_ARCHIVE, FCVAR_NOTIFY, FCVAR_REPLICATED}
 local LadderCVar = CreateConVar("holsterweapon_ladders", 1, CVarFlags, "Enable holstering your weapon on ladders.", 0, 2)
 local UndrawCVar = CreateConVar("holsterweapon_undraw", 1, CVarFlags, "Allow playing weapon draw animation backwards, as a fallback.", 0, 1)
 local WeaponCVar = CreateConVar("holsterweapon_weapon", "", CVarFlags, "Weapon to holster to. Invalid weapon returns default holster. Will remove previous holster-weapon on change.")
-local BindCVar = CreateClientConVar("holsterweapon_key", 18, true)
 local holster = "weaponholster"
 
 
 if CLIENT then
+    local BindCVar = CreateClientConVar("holsterweapon_key", 18, true)
+    local MemoryCVar = CreateClientConVar("holsterweapon_rememberlast", 1, true, true, "Remember the previous weapon you changed from before holstering.", 0, 1)
     hook.Add("PopulateToolMenu", "AddHolsterOptions", function()
         spawnmenu.AddToolMenuOption("Utilities", "Admin", "SimpleHolsterOptions", "Simple Holster", "", "", function(panel)
             local ladders = panel:ComboBox("Holstering in ladders", "holsterweapon_ladders")
@@ -17,6 +18,7 @@ if CLIENT then
             panel:TextEntry("Holstering weapon", "holsterweapon_weapon")
             panel:Help("Weapon class name to have as the ''the holster'', or leave blank for default (recommended).")
             panel:ControlHelp("Right click a weapon in the spawnmenu and click ''copy to clipboard'' to get its class name.")
+            panel:CheckBox("Remember last weapons", "holsterweapon_rememberlast")
             panel:CheckBox("Enable ''backwards weapon draw''", "holsterweapon_undraw")
         end)
     end)
@@ -27,9 +29,8 @@ if CLIENT then
     function SimpleHolster()
         local ply = LocalPlayer()
         if !ply:Alive() || ply.Holstering then return end
-        local weapon = ply:GetActiveWeapon()
+        local weapon, lastweapon, holsterweapon = ply:GetActiveWeapon(), ply:GetPreviousWeapon(), ply:GetWeapon(holster)
         local vm = ply:GetViewModel()
-        local holsterweapon = ply:GetWeapon(holster)
 
         HLAZCvar = HLAZCvar || GetConVar("hlaz_sv_holster")
         SSCVar = SSCVar || GetConVar("ss_enableholsterdelay")
@@ -42,7 +43,11 @@ if CLIENT then
         if based then
             local hasanim = vm:SelectWeightedSequence(ACT_VM_HOLSTER) != -1 && true
             local anim = hasanim && vm:SelectWeightedSequence(ACT_VM_HOLSTER) || (weapon:GetClass() == "weapon_slam" && vm:SelectWeightedSequence(ACT_SLAM_DETONATOR_THROW_DRAW) || vm:SelectWeightedSequence(ACT_VM_DRAW))
-                t = (ply:Ping() * 0.001) + vm:SequenceDuration(anim) * (hasanim and 1 or 0.5)
+                t = vm:SequenceDuration(anim) * (hasanim && 1 || 0.5)
+                -- print(hasanim, anim, t)
+                -- vm:SendViewModelMatchingSequence(anim)
+                -- vm:SetPlaybackRate(hasanim && 1 || -2)
+                -- ply:SetSaveValue("m_flNextAttack", CurTime()+t)
                 -- we're assuming the player's ping is stable here, so.
             -- else
             --     if vm:SelectWeightedSequence(ACT_SLAM_DETONATOR_THROW_DRAW) != -1 then
@@ -53,14 +58,13 @@ if CLIENT then
             -- end
         end
 
+        ply.HolsterWep = (weapon != holsterweapon && lastweapon || ply.HolsterWep)
+
         timer.Simple(t, function()
-            if weapon == holsterweapon && (ply:Alive() && IsValid(ply.HolsterWep)) then
-                input.SelectWeapon(ply.HolsterWep)
-            else
-                ply.HolsterWep = weapon
-                if (ply:Alive() && IsValid(holsterweapon)) then
-                    input.SelectWeapon(holsterweapon)
-                end
+            if weapon == holsterweapon && (ply:Alive() && IsValid(lastweapon)) then
+                input.SelectWeapon(lastweapon)
+            elseif (ply:Alive() && IsValid(holsterweapon)) then
+                input.SelectWeapon(holsterweapon)
             end
             ply.Holstering = false
         end)
@@ -74,13 +78,18 @@ if CLIENT then
         holster = net.ReadString()
     end)
 
+    net.Receive("holstering", function()
+        local lp = LocalPlayer()
+        if MemoryCVar then lp:SetSaveValue("m_hLastWeapon", lp.HolsterWep || lp:GetPreviousWeapon()) end
+    end)
+
     concommand.Add("holsterweapon", SimpleHolster, nil, "Holster You're Weapon.")
 
     hook.Add("PlayerBindPress", "SimpleHolsterSlot0", function(ply, bind, pressed, code)
         if bind == "slot0" && !input.LookupBinding("holsterweapon") && !IsFirstTimePredicted() then SimpleHolster() end
     end)
 
-    hook.Add("Think", "HolsterThink", function()
+    hook.Add("CreateMove", "HolsterThink", function()
         local ply = LocalPlayer()
         if !IsValid(ply) then return end
         if (ply:Alive() && IsValid(ply:GetActiveWeapon()) && LadderCVar:GetBool()) then
@@ -173,8 +182,9 @@ if SERVER then
             vm:SendViewModelMatchingSequence(anim)
             vm:SetPlaybackRate(hasanim && 1 || -2)
             local t = (vm:SequenceDuration() / math.abs(vm:GetPlaybackRate())) + 0.1
-            weapon:SetNextPrimaryFire(math.max(weapon:GetNextPrimaryFire(), ct+t))
+            -- print(hasanim, anim, t)
             ply:SetSaveValue("m_flNextAttack", t)
+            weapon:SetNextPrimaryFire(math.max(weapon:GetNextPrimaryFire(), ct+t))
         end -- multiplayer holster animations, needed in current implementation
     end
 
@@ -192,13 +202,21 @@ hook.Add("PlayerSwitchWeapon", "HolsterWeaponSwitchHook", function(ply, oldwep, 
     --         return true
     --     end
     -- end
-    if ply:GetMoveType() == MOVETYPE_LADDER && LadderCVar:GetBool() && IsValid(oldwep) && oldwep:GetClass() == holster then
-        return true
+    if IsValid(oldwep) && oldwep:GetClass() == holster then
+        if ply:GetMoveType() == MOVETYPE_LADDER && LadderCVar:GetBool() then
+            return true
+        end
+        if SERVER && game.SinglePlayer() then
+            net.Start("holstering")
+            net.Send(ply)
+        elseif CLIENT && MemoryCVar then
+            ply:SetSaveValue("m_hLastWeapon", ply.HolsterWep || ply:GetPreviousWeapon())
+        end
     end
 end)
 
--- hook.Add("StartCommand", "SimpleHolsterActionStop", function(ply, ucmd)
---     if ply:Alive() && ply.Holstering then
---         ucmd:SetButtons(bit.band(ucmd:GetButtons(), bit.bnot(10241)))
---     end
--- end)
+hook.Add("StartCommand", "SimpleHolsterActionStop", function(ply, ucmd)
+    if ply:Alive() && ply.Holstering then
+        ucmd:SetButtons(bit.band(ucmd:GetButtons(), bit.bnot(10241)))
+    end
+end)
