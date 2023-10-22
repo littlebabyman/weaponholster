@@ -2,12 +2,12 @@ local CVarFlags = {FCVAR_ARCHIVE, FCVAR_NOTIFY, FCVAR_REPLICATED}
 local LadderCVar = CreateConVar("holsterweapon_ladders", 1, CVarFlags, "Enable holstering your weapon on ladders.", 0, 2)
 local UndrawCVar = CreateConVar("holsterweapon_undraw", 1, CVarFlags, "Allow playing weapon draw animation backwards, as a fallback.", 0, 1)
 local WeaponCVar = CreateConVar("holsterweapon_weapon", "", CVarFlags, "Weapon to holster to. Invalid weapon returns default holster. Will remove previous holster-weapon on change.")
+local BindCVar = CreateClientConVar("holsterweapon_key", 18, true)
+local MemoryCVar = CreateClientConVar("holsterweapon_rememberlast", 1, true, true, "Remember the previous weapon you changed from before holstering.", 0, 1)
 local holster = "weaponholster"
 
 
 if CLIENT then
-    local BindCVar = CreateClientConVar("holsterweapon_key", 18, true)
-    local MemoryCVar = CreateClientConVar("holsterweapon_rememberlast", 1, true, true, "Remember the previous weapon you changed from before holstering.", 0, 1)
     hook.Add("PopulateToolMenu", "AddHolsterOptions", function()
         spawnmenu.AddToolMenuOption("Utilities", "Admin", "SimpleHolsterOptions", "Simple Holster", "", "", function(panel)
             local ladders = panel:ComboBox("Holstering in ladders", "holsterweapon_ladders")
@@ -80,7 +80,7 @@ if CLIENT then
 
     net.Receive("holstering", function()
         local lp = LocalPlayer()
-        if MemoryCVar then lp:SetSaveValue("m_hLastWeapon", lp.HolsterWep || lp:GetPreviousWeapon()) end
+        if MemoryCVar:GetBool() then lp:SetSaveValue("m_hLastWeapon", lp.HolsterWep || lp:GetPreviousWeapon()) end
     end)
 
     concommand.Add("holsterweapon", SimpleHolster, nil, "Holster You're Weapon.")
@@ -209,7 +209,7 @@ hook.Add("PlayerSwitchWeapon", "HolsterWeaponSwitchHook", function(ply, oldwep, 
         if SERVER && game.SinglePlayer() then
             net.Start("holstering")
             net.Send(ply)
-        elseif CLIENT && MemoryCVar then
+        elseif CLIENT && MemoryCVar:GetBool() then
             ply:SetSaveValue("m_hLastWeapon", ply.HolsterWep || ply:GetPreviousWeapon())
         end
     end
