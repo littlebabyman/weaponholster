@@ -157,6 +157,10 @@ if SERVER then
         end)
     end
 
+    local function GetAnimation(mdl)
+        return mdl:LookupSequence("holster") != -1 && mdl:LookupSequence("holster") || (mdl:SelectWeightedSequence(ACT_VM_HOLSTER) != -1 && vm:SelectWeightedSequence(ACT_VM_HOLSTER) || (mdl:SelectWeightedSequence(ACT_SLAM_DETONATOR_THROW_DRAW) != -1 && mdl:SelectWeightedSequence(ACT_SLAM_DETONATOR_THROW_DRAW)) || mdl:LookupSequence("draw") != -1 && mdl:LookupSequence("draw") || mdl:SelectWeightedSequence(ACT_VM_DRAW) != -1 && mdl:SelectWeightedSequence(ACT_VM_DRAW))
+    end
+
     function DoWeaponHolstering(ply, exc)
         if !IsValid(ply) then return end
         local weapon, vm, ct = ply:GetActiveWeapon(), ply:GetViewModel(), CurTime()
@@ -168,9 +172,9 @@ if SERVER then
         -- if LadderCVar:GetInt() == 2 then
         if ply:GetMoveType() == MOVETYPE_LADDER && ply:GetActiveWeapon() != NULL then
             local model = vm:GetModel()
-            vm:SetModel(model)
+            -- vm:SetModel(model)
             local hasanim = vm:LookupSequence("holster") != -1 || vm:SelectWeightedSequence(ACT_VM_HOLSTER) != -1
-            local anim = vm:LookupSequence("holster") != -1 && vm:LookupSequence("holster") || (vm:SelectWeightedSequence(ACT_VM_HOLSTER) != -1 && vm:SelectWeightedSequence(ACT_VM_HOLSTER) || (vm:SelectWeightedSequence(ACT_SLAM_DETONATOR_THROW_DRAW) != -1 && vm:SelectWeightedSequence(ACT_SLAM_DETONATOR_THROW_DRAW)) || vm:LookupSequence("draw") != -1 && vm:LookupSequence("draw") || vm:SelectWeightedSequence(ACT_VM_DRAW) != -1 && vm:SelectWeightedSequence(ACT_VM_DRAW))
+            local anim = GetAnimation(vm)
             if ply:GetActiveWeapon() != ply:GetWeapon(holster) then
             end
             if anim then
