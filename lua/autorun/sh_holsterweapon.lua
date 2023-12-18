@@ -35,7 +35,7 @@ if CLIENT then
         HLAZCvar = HLAZCvar || GetConVar("hlaz_sv_holster")
         SSCVar = SSCVar || GetConVar("ss_enableholsterdelay")
 
-        local based = IsValid(weapon) && !(weapon.ArcCW || weapon.ARC9 || weapon.ArcticTacRP || weapon.IsTFAWeapon || weapon.CW20Weapon || weapon.IsFAS2Weapon || weapon.IsUT99Weapon || weapons.IsBasedOn(weapon:GetClass(), "weapon_ss2_base") || weapons.IsBasedOn(weapon:GetClass(), "weapon_ut2004_base") || (weapons.IsBasedOn(weapon:GetClass(), "weapon_hlaz_base") && SSCVar:GetBool()) || (weapons.IsBasedOn(weapon:GetClass(), "weapon_ss_base") && SSCvar:GetBool()))
+        local based = IsValid(weapon) && !(weapon.ArcCW || weapon.ARC9 || weapon.ArcticTacRP || weapon.IsTFAWeapon || weapon.CW20Weapon || weapon.IsFAS2Weapon || weapon.IsUT99Weapon || weapons.IsBasedOn(weapon:GetClass(), "weapon_ss2_base") || weapons.IsBasedOn(weapon:GetClass(), "weapon_ut2004_base") || (weapons.IsBasedOn(weapon:GetClass(), "weapon_hlaz_base") && SSCVar:GetBool()) || (weapons.IsBasedOn(weapon:GetClass(), "weapon_ss_base") && SSCVar:GetBool()))
         local t = 0
 
         ply.Holstering = true
@@ -156,9 +156,9 @@ if SERVER then
             end)
         end)
     end
-
+    -- || (mdl:SelectWeightedSequence(ACT_SLAM_DETONATOR_THROW_DRAW) != -1 && mdl:SelectWeightedSequence(ACT_SLAM_DETONATOR_THROW_DRAW)) 
     local function GetAnimation(mdl)
-        return mdl:LookupSequence("holster") != -1 && mdl:LookupSequence("holster") || (mdl:SelectWeightedSequence(ACT_VM_HOLSTER) != -1 && vm:SelectWeightedSequence(ACT_VM_HOLSTER) || (mdl:SelectWeightedSequence(ACT_SLAM_DETONATOR_THROW_DRAW) != -1 && mdl:SelectWeightedSequence(ACT_SLAM_DETONATOR_THROW_DRAW)) || mdl:LookupSequence("draw") != -1 && mdl:LookupSequence("draw") || mdl:SelectWeightedSequence(ACT_VM_DRAW) != -1 && mdl:SelectWeightedSequence(ACT_VM_DRAW))
+        return (mdl:SelectWeightedSequence(ACT_VM_HOLSTER) != -1 && mdl:SelectWeightedSequence(ACT_VM_HOLSTER) || mdl:LookupSequence("holster") != -1 && mdl:LookupSequence("holster") || mdl:SelectWeightedSequence(ACT_VM_DRAW) != -1 && mdl:SelectWeightedSequence(ACT_VM_DRAW) || mdl:LookupSequence("draw") != -1 && mdl:LookupSequence("draw") || (mdl:SelectWeightedSequence(ACT_SLAM_DETONATOR_THROW_DRAW) != -1 && mdl:SelectWeightedSequence(ACT_SLAM_DETONATOR_THROW_DRAW)) || -1)
     end
 
     function DoWeaponHolstering(ply, exc)
@@ -172,25 +172,36 @@ if SERVER then
         -- if LadderCVar:GetInt() == 2 then
         if ply:GetMoveType() == MOVETYPE_LADDER && ply:GetActiveWeapon() != NULL then
             local model = vm:GetModel()
-            -- vm:SetModel(model)
-            local hasanim = vm:LookupSequence("holster") != -1 || vm:SelectWeightedSequence(ACT_VM_HOLSTER) != -1
+            local hasanim = vm:SelectWeightedSequence(ACT_VM_HOLSTER) != -1 || vm:LookupSequence("holster") != -1
             local anim = GetAnimation(vm)
-            if ply:GetActiveWeapon() != ply:GetWeapon(holster) then
-            end
-            if anim then
+            print(vm:GetSequence(), vm:GetSequenceName(vm:GetSequence()), vm:SelectWeightedSequence(ACT_VM_HOLSTER), vm:LookupSequence("holster"), anim, hasanim)
+            if anim == -1 then
+                print("no anim")
+                ply:SelectWeapon(holster)
+            else
+                ply:SetActiveWeapon(NULL)
+                ply:DrawViewModel(true)
+                if vm:GetSequence() != 0 then
+                    vm:SendViewModelMatchingSequence(0)
+                end
+                vm:SetModel(model)
+                print(hasanim, vm:GetSequenceName(anim))
                 vm:SendViewModelMatchingSequence(anim)
                 vm:SetPlaybackRate(hasanim && 1 || -2)
-            else
-                ply:SelectWeapon(holster)
+            end
+            if ply:GetActiveWeapon() == ply:GetWeapon(holster) then
+                print("current holster")
+                vm:SetModel(model)
             end
             ply:SetActiveWeapon(NULL)
             ply:DrawViewModel(true)
             ply:SetSaveValue("m_hLastWeapon", weapon)
+            timer.Simple(vm:SequenceDuration(), function() if ply:GetActiveWeapon() != NULL then return else ply:DrawViewModel(false) end end)
             -- end -- multiplayer holster animations, needed in current implementation
         elseif ply:GetActiveWeapon() == NULL then
             -- ply:SetActiveWeapon(ply:GetWeapon(holster))
             ply:SelectWeapon(ply:GetPreviousWeapon())
-            if ply:GetActiveWeapon().Deploy then ply:GetActiveWeapon():Deploy() end
+            -- if ply:GetActiveWeapon().Deploy then ply:GetActiveWeapon():Deploy() end
         elseif exc then
             local hasanim = vm:LookupSequence("holster") || vm:SelectWeightedSequence(ACT_VM_HOLSTER) != -1
             local anim = vm:LookupSequence("holster") != -1 && vm:LookupSequence("holster") || (vm:SelectWeightedSequence(ACT_VM_HOLSTER) != -1 && vm:SelectWeightedSequence(ACT_VM_HOLSTER) || (vm:SelectWeightedSequence(ACT_SLAM_DETONATOR_THROW_DRAW) != -1 && vm:SelectWeightedSequence(ACT_SLAM_DETONATOR_THROW_DRAW)) || vm:LookupSequence("draw") != -1 && vm:LookupSequence("draw") || vm:SelectWeightedSequence(ACT_VM_DRAW) != -1 && vm:SelectWeightedSequence(ACT_VM_DRAW) || vm:GetSequence())
