@@ -174,9 +174,8 @@ if SERVER then
             local model = vm:GetModel()
             local hasanim = vm:SelectWeightedSequence(ACT_VM_HOLSTER) != -1 || vm:LookupSequence("holster") != -1
             local anim = GetAnimation(vm)
-            print(vm:GetSequence(), vm:GetSequenceName(vm:GetSequence()), vm:SelectWeightedSequence(ACT_VM_HOLSTER), vm:LookupSequence("holster"), anim, hasanim)
+            -- print(vm:GetSequence(), vm:GetSequenceName(vm:GetSequence()), vm:SelectWeightedSequence(ACT_VM_HOLSTER), vm:LookupSequence("holster"), anim, hasanim)
             if anim == -1 then
-                print("no anim")
                 ply:SelectWeapon(holster)
             else
                 ply:SetActiveWeapon(NULL)
@@ -185,12 +184,10 @@ if SERVER then
                     vm:SendViewModelMatchingSequence(0)
                 end
                 vm:SetModel(model)
-                print(hasanim, vm:GetSequenceName(anim))
                 vm:SendViewModelMatchingSequence(anim)
                 vm:SetPlaybackRate(hasanim && 1 || -2)
             end
             if ply:GetActiveWeapon() == ply:GetWeapon(holster) then
-                print("current holster")
                 vm:SetModel(model)
             end
             ply:SetActiveWeapon(NULL)
@@ -200,6 +197,7 @@ if SERVER then
             -- end -- multiplayer holster animations, needed in current implementation
         elseif ply:GetActiveWeapon() == NULL then
             -- ply:SetActiveWeapon(ply:GetWeapon(holster))
+            ply:DrawViewModel(true)
             ply:SelectWeapon(ply:GetPreviousWeapon())
             -- if ply:GetActiveWeapon().Deploy then ply:GetActiveWeapon():Deploy() end
         elseif exc then
