@@ -185,7 +185,7 @@ if SERVER then
                 end
                 vm:SetModel(model)
                 vm:SendViewModelMatchingSequence(anim)
-                vm:SetPlaybackRate(hasanim && 1 || -2)
+                vm:SetPlaybackRate(hasanim && 2 || -2)
             end
             if ply:GetActiveWeapon() == ply:GetWeapon(holster) then
                 vm:SetModel(model)
@@ -215,7 +215,7 @@ if SERVER then
             --     vm:SetPlaybackRate(-2)
             -- end
             vm:SendViewModelMatchingSequence(anim)
-            vm:SetPlaybackRate(hasanim && 1 || -2)
+            vm:SetPlaybackRate(hasanim && 2 || -2)
             -- local t = (vm:SequenceDuration() / math.abs(vm:GetPlaybackRate())) + 0.1
             -- print(hasanim, anim, t)
             -- ply:SetSaveValue("m_flNextAttack", t)

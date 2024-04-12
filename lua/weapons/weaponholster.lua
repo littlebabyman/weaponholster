@@ -23,6 +23,7 @@ SWEP.DisableDuplicator = true
 SWEP.DrawWeaponInfoBox = false
 SWEP.BounceWeaponIcon = false
 SWEP.m_bPlayPickupSound = false
+SWEP.Instructions = "Press secondary fire to toggle the crosshair."
 
 function SWEP:Initialize()
     self:SetHoldType("normal")
@@ -40,21 +41,30 @@ function SWEP:Think()
 end
 
 function SWEP:PrimaryAttack()
+    local owner = self:GetOwner()
 end
 
 function SWEP:SecondaryAttack()
-    if game.SinglePlayer() and SERVER then self:CallOnClient("SecondaryAttack")
-    elseif CLIENT then
-        self.DrawCrosshair = !self.DrawCrosshair
+    local owner = self:GetOwner()
+end
+
+function SWEP:Reload()
+    local owner = self:GetOwner()
+    if !owner or !owner:IsPlayer() then return end
+    if owner:KeyPressed(IN_RELOAD) or CLIENT and game.SinglePlayer() then
+        if game.SinglePlayer() and SERVER then self:CallOnClient("Reload") end
+        if CLIENT then
+            self.DrawCrosshair = !self.DrawCrosshair
+        end
     end
 end
 
 function SWEP:DrawWeaponSelection()
 end
 
-function SWEP:PrintWeaponInfo()
-    return false
-end
+-- function SWEP:PrintWeaponInfo()
+--     return false
+-- end
 
 function SWEP:Holster(wep)
     return true
