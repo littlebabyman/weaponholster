@@ -47,18 +47,6 @@ if CLIENT then
             local hasanim = vm:SelectWeightedSequence(ACT_VM_HOLSTER) != -1 && true
             local anim = hasanim && vm:SelectWeightedSequence(ACT_VM_HOLSTER) || (weapon:GetClass() == "weapon_slam" && vm:SelectWeightedSequence(ACT_SLAM_DETONATOR_THROW_DRAW) || vm:SelectWeightedSequence(ACT_VM_DRAW))
             t = vm:SequenceDuration(anim) * (hasanim && 1 || 0.5)
-                -- print(hasanim, anim, t)
-                -- vm:SendViewModelMatchingSequence(anim)
-                -- vm:SetPlaybackRate(hasanim && 1 || -2)
-                -- ply:SetSaveValue("m_flNextAttack", CurTime()+t)
-                -- we're assuming the player's ping is stable here, so.
-            -- else
-            --     if vm:SelectWeightedSequence(ACT_SLAM_DETONATOR_THROW_DRAW) != -1 then
-            --         t = (ply:Ping() * 0.001) + vm:SequenceDuration(vm:SelectWeightedSequence(ACT_SLAM_DETONATOR_THROW_DRAW)) * 0.5
-            --     else
-            --         t = (ply:Ping() * 0.001) + vm:SequenceDuration(vm:SelectWeightedSequence(ACT_VM_DRAW)) * 0.5
-            --     end
-            -- end
         end
 
         ply.HolsterWep = (weapon != holsterweapon && lastweapon || ply.HolsterWep)
