@@ -43,9 +43,7 @@ if CLIENT then
 
         ply.Holstering = true
 
-        if ply:GetMoveType() == MOVETYPE_LADDER then
-            t = 0
-        elseif based then
+        if ply:GetMoveType() != MOVETYPE_LADDER && based then
             local hasanim = vm:SelectWeightedSequence(ACT_VM_HOLSTER) != -1 && true
             local anim = hasanim && vm:SelectWeightedSequence(ACT_VM_HOLSTER) || (weapon:GetClass() == "weapon_slam" && vm:SelectWeightedSequence(ACT_SLAM_DETONATOR_THROW_DRAW) || vm:SelectWeightedSequence(ACT_VM_DRAW))
             t = vm:SequenceDuration(anim) * (hasanim && 1 || 0.5)
