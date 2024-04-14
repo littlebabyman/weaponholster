@@ -8,7 +8,7 @@ local holster = "weaponholster"
 
 
 if CLIENT then
-    hook.Add("PopulateToolMenu", "AddHolsterOptions", function()
+    hook.Add("PopulateToolMenu", "CATAddHolsterOptions", function()
         spawnmenu.AddToolMenuOption("Options", "Chen's Addons", "SimpleHolsterOptions", "Simple Holster", "", "", function(panel)
             local sv = vgui.Create("DForm")
             panel:AddItem(sv)

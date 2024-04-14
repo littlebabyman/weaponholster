@@ -20,10 +20,9 @@ SWEP.Secondary.DefaultClip = 0
 SWEP.Secondary.Automatic = false
 SWEP.DrawCrosshair = false
 SWEP.DisableDuplicator = true
-SWEP.DrawWeaponInfoBox = false
 SWEP.BounceWeaponIcon = false
 SWEP.m_bPlayPickupSound = false
-SWEP.Instructions = "Press secondary fire to toggle the crosshair."
+SWEP.Instructions = "Press Reload to toggle the crosshair."
 
 function SWEP:Initialize()
     self:SetHoldType("normal")
@@ -41,11 +40,11 @@ function SWEP:Think()
 end
 
 function SWEP:PrimaryAttack()
-    local owner = self:GetOwner()
+    -- local owner = self:GetOwner()
 end
 
 function SWEP:SecondaryAttack()
-    local owner = self:GetOwner()
+    -- local owner = self:GetOwner()
 end
 
 function SWEP:Reload()
