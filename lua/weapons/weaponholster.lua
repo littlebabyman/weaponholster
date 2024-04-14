@@ -22,6 +22,7 @@ SWEP.DrawCrosshair = false
 SWEP.DisableDuplicator = true
 SWEP.BounceWeaponIcon = false
 SWEP.m_bPlayPickupSound = false
+if CLIENT then SWEP.WepSelectIcon = surface.GetTextureID( "vgui/null" ) end
 SWEP.Instructions = "Press Reload to toggle the crosshair."
 
 function SWEP:Initialize()
@@ -58,8 +59,8 @@ function SWEP:Reload()
     end
 end
 
-function SWEP:DrawWeaponSelection()
-end
+-- function SWEP:DrawWeaponSelection()
+-- end
 
 -- function SWEP:PrintWeaponInfo()
 --     return false
