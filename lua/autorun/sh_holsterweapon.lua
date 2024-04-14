@@ -100,13 +100,14 @@ if CLIENT then
         if !IsValid(ply) then return end
         if (ply:Alive() && LadderCVar:GetBool()) then
             local weapon = ply:GetActiveWeapon()
-            local holstered = !IsValid(weapon) || weapon:GetClass() == holster
-            local based = !holstered && (weapons.IsBasedOn(weapon:GetClass(), "mg_base") || weapons.IsBasedOn(weapon:GetClass(), "kf_zed_pill"))
-            if (!ply.InLadder && holstered) || based then return end
-            if ply:GetMoveType() == MOVETYPE_LADDER && !ply.InLadder && !holstered then
+            local validwep = IsValid(weapon)
+            local holstered = validwep && weapon:GetClass() == holster
+            local based = validwep && !holstered && (weapons.IsBasedOn(weapon:GetClass(), "mg_base") || weapons.IsBasedOn(weapon:GetClass(), "kf_zed_pill"))
+            if based then return end
+            if ply:GetMoveType() == MOVETYPE_LADDER && !ply.InLadder && validwep then
                 SimpleHolster()
                 ply.InLadder = true
-            elseif ply:GetMoveType() != MOVETYPE_LADDER && ply.InLadder && holstered then
+            elseif ply:GetMoveType() != MOVETYPE_LADDER && ply.InLadder && !validwep then
                 SimpleHolster()
                 ply.InLadder = false
             end
