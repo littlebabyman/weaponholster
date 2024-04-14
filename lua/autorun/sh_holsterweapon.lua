@@ -86,6 +86,7 @@ if CLIENT then
 
     net.Receive("holstering", function()
         local lp = LocalPlayer()
+        hook.Run("OnViewModelChanged", lp:GetViewModel())
         if MemoryCVar:GetBool() then lp:SetSaveValue("m_hLastWeapon", lp.HolsterWep || lp:GetPreviousWeapon()) end
     end)
 
@@ -173,6 +174,7 @@ if SERVER then
             ply:Give(holster)
             -- timer.Simple(t, function() ply:SelectWeapon(holster) end)
         end
+        local str = "holstertimer" .. ply:EntIndex()
         -- if LadderCVar:GetInt() == 2 then
         if ply:GetMoveType() == MOVETYPE_LADDER && ply:GetActiveWeapon() != NULL then
             local model = vm:GetModel()
@@ -197,16 +199,13 @@ if SERVER then
             --     vm:SetModel(model)
             -- end
             ply:SetSaveValue("m_hLastWeapon", weapon)
-            local str = "holstertimer" .. ply:EntIndex()
             timer.Create(str, vm:SequenceDuration(), 1, function()
-                if ply:GetActiveWeapon() == NULL then
-                    ply:DrawViewModel(false)
-                end
-                timer.Remove(str)
+                ply:DrawViewModel(false)
             end)
             -- end -- multiplayer holster animations, needed in current implementation
         elseif ply:GetActiveWeapon() == NULL then
             -- ply:SetActiveWeapon(ply:GetWeapon(holster))
+            timer.Remove(str)
             ply:DrawViewModel(true)
             ply:SelectWeapon(ply:GetPreviousWeapon())
             -- if ply:GetActiveWeapon().Deploy then ply:GetActiveWeapon():Deploy() end
