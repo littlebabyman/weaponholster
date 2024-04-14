@@ -181,6 +181,8 @@ if SERVER then
             -- print(vm:GetSequence(), vm:GetSequenceName(vm:GetSequence()), vm:SelectWeightedSequence(ACT_VM_HOLSTER), vm:LookupSequence("holster"), anim, hasanim)
             if anim == -1 then
                 ply:SelectWeapon(holster)
+                ply:SetActiveWeapon(NULL)
+                ply:DrawViewModel(true)
             else
                 ply:SetActiveWeapon(NULL)
                 ply:DrawViewModel(true)
@@ -191,13 +193,17 @@ if SERVER then
                 vm:SendViewModelMatchingSequence(anim)
                 vm:SetPlaybackRate(hasanim && 2 || -2)
             end
-            if ply:GetActiveWeapon() == ply:GetWeapon(holster) then
-                vm:SetModel(model)
-            end
-            ply:SetActiveWeapon(NULL)
-            ply:DrawViewModel(true)
+            -- if ply:GetActiveWeapon() == ply:GetWeapon(holster) then
+            --     vm:SetModel(model)
+            -- end
             ply:SetSaveValue("m_hLastWeapon", weapon)
-            timer.Simple(vm:SequenceDuration(), function() if ply:GetActiveWeapon() != NULL then return else ply:DrawViewModel(false) end end)
+            local str = "holstertimer" .. ply:EntIndex()
+            timer.Create(str, vm:SequenceDuration(), 1, function()
+                if ply:GetActiveWeapon() == NULL then
+                    ply:DrawViewModel(false)
+                end
+                timer.Remove(str)
+            end)
             -- end -- multiplayer holster animations, needed in current implementation
         elseif ply:GetActiveWeapon() == NULL then
             -- ply:SetActiveWeapon(ply:GetWeapon(holster))
