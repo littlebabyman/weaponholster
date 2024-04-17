@@ -42,9 +42,9 @@ if CLIENT then
 
         ply.Holstering = true
 
-        if (LadderCVar:GetBool() && ply:GetMoveType() != MOVETYPE_LADDER && !IsValid(weapon)) || based then
+        if IsValid(vm) && ((LadderCVar:GetBool() && ply:GetMoveType() != MOVETYPE_LADDER && !IsValid(weapon)) || based) then
             local hasanim = vm:SelectWeightedSequence(ACT_VM_HOLSTER) != -1 && true
-            local anim = hasanim && vm:SelectWeightedSequence(ACT_VM_HOLSTER) || (weapon:GetClass() == "weapon_slam" && vm:SelectWeightedSequence(ACT_SLAM_DETONATOR_THROW_DRAW) || vm:SelectWeightedSequence(ACT_VM_DRAW))
+            local anim = hasanim && vm:SelectWeightedSequence(ACT_VM_HOLSTER) || (IsValid(weapon) && weapon:GetClass() == "weapon_slam" && vm:SelectWeightedSequence(ACT_SLAM_DETONATOR_THROW_DRAW) || vm:SelectWeightedSequence(ACT_VM_DRAW))
             t = vm:SequenceDuration(anim) * 0.5
         end
 
@@ -72,6 +72,7 @@ if CLIENT then
 
     net.Receive("holstering", function()
         local lp = LocalPlayer()
+        if !IsValid(lp) then return end
         hook.Run("OnViewModelChanged", lp:GetViewModel())
         if MemoryCVar:GetBool() then lp:SetSaveValue("m_hLastWeapon", lp.HolsterWep || lp:GetPreviousWeapon()) end
     end)
