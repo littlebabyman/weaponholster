@@ -42,7 +42,7 @@ if CLIENT then
 
         ply.Holstering = true
 
-        if IsValid(vm) && ((LadderCVar:GetBool() && ply:GetMoveType() != MOVETYPE_LADDER && !IsValid(weapon)) || based) then
+        if IsValid(vm) && ((LadderCVar:GetBool() && (ply:GetMoveType() != MOVETYPE_LADDER || ply.InLadder)) || based) then
             local hasanim = vm:SelectWeightedSequence(ACT_VM_HOLSTER) != -1 && true
             local anim = hasanim && vm:SelectWeightedSequence(ACT_VM_HOLSTER) || (IsValid(weapon) && weapon:GetClass() == "weapon_slam" && vm:SelectWeightedSequence(ACT_SLAM_DETONATOR_THROW_DRAW) || vm:SelectWeightedSequence(ACT_VM_DRAW))
             t = vm:SequenceDuration(anim) * 0.5
@@ -52,7 +52,7 @@ if CLIENT then
 
         timer.Create("holstertimer_client", t, 1, function()
             ply.Holstering = false
-            if LadderCVar:GetBool() && (ply:GetMoveType() == 9 && !ply.InLadder && !IsValid(weapon) || ply:GetMoveType() != 9 && ply.InLadder && IsValid(weapon)) then return end
+            if LadderCVar:GetBool() && (ply:GetMoveType() == 9 && !ply.InLadder && !IsValid(weapon) || ply:GetMoveType() != 9 && ply.InLadder && IsValid(weapon)) then if game.SinglePlayer() then ply.InLadder = false end return end
             if !IsValid(weapon) || !IsValid(ply:GetActiveWeapon()) then return end
             if weapon == holsterweapon && (ply:Alive() && IsValid(lastweapon)) then
                 input.SelectWeapon(lastweapon)
@@ -86,7 +86,7 @@ if CLIENT then
     hook.Add("CreateMove", "HolsterThink", function()
         local ply = LocalPlayer()
         if !IsValid(ply) then return end
-        if (ply:Alive() && LadderCVar:GetBool()) then
+        if (ply:Alive() && LadderCVar:GetBool()) && ply:GetInternalVariable("m_vecLadderNormal").z <= 0.9 then
             local weapon = ply:GetActiveWeapon()
             local validwep = IsValid(weapon)
             local holstered = validwep && weapon:GetClass() == holster
@@ -160,7 +160,9 @@ if SERVER then
         end
         local str = "holstertimer" .. ply:EntIndex()
         -- if LadderCVar:GetInt() == 2 then
-        if ply:GetMoveType() == MOVETYPE_LADDER && ply:GetActiveWeapon() != NULL then
+        -- if IsValid(ply:GetEntityInUse()) && ply:GetEntityInUse():GetClass() == "player_pickup" then return end
+        -- print(ply:GetInternalVariable("m_vecLadderNormal"))
+        if ply:GetMoveType() == MOVETYPE_LADDER && ply:GetActiveWeapon() != NULL && ply:GetInternalVariable("m_vecLadderNormal").z < 0.9 then
             local model = vm:GetModel()
             local hasanim = vm:SelectWeightedSequence(ACT_VM_HOLSTER) != -1 || vm:LookupSequence("holster") != -1
             local anim = GetAnimation(vm)
