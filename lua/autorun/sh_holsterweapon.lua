@@ -85,14 +85,15 @@ if CLIENT then
 
     hook.Add("CreateMove", "HolsterThink", function(cmd)
         local ply = LocalPlayer()
-        if !IsValid(ply) || cmd:CommandNumber() == 0 then return end
-        if (ply:Alive() && LadderCVar:GetBool()) && ply:GetInternalVariable("m_vecLadderNormal").z <= 0.9 then
+        if !IsValid(ply) then return end
+        if (ply:Alive() && LadderCVar:GetBool()) then
+            local vert = !game.SinglePlayer() && ply:GetInternalVariable("m_vecLadderNormal").z <= 0.9 || ply:GetVelocity().z != 0
             local weapon = ply:GetActiveWeapon()
             local validwep = IsValid(weapon)
             local holstered = validwep && weapon:GetClass() == holster
             local based = validwep && !holstered && (weapons.IsBasedOn(weapon:GetClass(), "mg_base") || weapons.IsBasedOn(weapon:GetClass(), "kf_zed_pill"))
             if based || ply.Holstering then return end
-            if ply:GetMoveType() == MOVETYPE_LADDER && !ply.InLadder && validwep && !ply.Holstering then
+            if ply:GetMoveType() == MOVETYPE_LADDER && !ply.InLadder && validwep && !ply.Holstering && vert then
                 SimpleHolster()
                 ply.InLadder = true
             elseif ply:GetMoveType() != MOVETYPE_LADDER && ply.InLadder && !validwep && !ply.Holstering then
