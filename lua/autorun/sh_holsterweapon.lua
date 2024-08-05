@@ -10,6 +10,8 @@ local function GetAnimation(mdl)
     return (mdl:SelectWeightedSequence(ACT_VM_HOLSTER) != -1 && mdl:SelectWeightedSequence(ACT_VM_HOLSTER) || mdl:LookupSequence("holster") != -1 && mdl:LookupSequence("holster") || mdl:SelectWeightedSequence(ACT_VM_DRAW) != -1 && mdl:SelectWeightedSequence(ACT_VM_DRAW) || mdl:LookupSequence("draw") != -1 && mdl:LookupSequence("draw") || (mdl:SelectWeightedSequence(ACT_SLAM_DETONATOR_THROW_DRAW) != -1 && mdl:SelectWeightedSequence(ACT_SLAM_DETONATOR_THROW_DRAW)) || -1)
 end
 
+local PLAYER = FindMetaTable("Player")
+
 if CLIENT then
     hook.Add("PopulateToolMenu", "CATAddHolsterOptions", function()
         spawnmenu.AddToolMenuOption("Options", "Chen's Addons", "SimpleHolsterOptions", "Simple Holster", "", "", function(panel)
@@ -83,25 +85,49 @@ if CLIENT then
         if bind == "slot0" && !input.LookupBinding("holsterweapon") && !IsFirstTimePredicted() then SimpleHolster() end
     end)
 
+    local ENTITY = FindMetaTable("Entity")
+    local eGetTable = ENTITY.GetTable
+    local pAlive = PLAYER.Alive
+    local eGetInternalVariable = ENTITY.GetInternalVariable
+    local eGetVelocity = ENTITY.GetVelocity
+    local pGetActiveWeapon = PLAYER.GetActiveWeapon
+    local eGetClass = ENTITY.GetClass
+    local eGetMoveType = ENTITY.GetMoveType
+    
     hook.Add("CreateMove", "HolsterThink", function(cmd)
         local ply = LocalPlayer()
-        if !IsValid(ply) then return end
-        if (ply:Alive() && LadderCVar:GetBool()) then
-            local vert = !game.SinglePlayer() && ply:GetInternalVariable("m_vecLadderNormal").z <= 0.9 || ply:GetVelocity().z != 0
-            local weapon = ply:GetActiveWeapon()
+    
+        if !IsValid(ply) then
+            return
+        end
+    
+        local plyTable = eGetTable(ply)
+    
+        if (pAlive(ply) and LadderCVar:GetBool()) then
+            local vert = !game.SinglePlayer() and eGetInternalVariable(ply, "m_vecLadderNormal").z <= 0.9 or eGetVelocity(ply).z != 0
+            local weapon = pGetActiveWeapon(ply)
             local validwep = IsValid(weapon)
-            local holstered = validwep && weapon:GetClass() == holster
-            local based = validwep && !holstered && (weapons.IsBasedOn(weapon:GetClass(), "mg_base") || weapons.IsBasedOn(weapon:GetClass(), "kf_zed_pill"))
-            if based || ply.Holstering then return end
-            if ply:GetMoveType() == MOVETYPE_LADDER && !ply.InLadder && validwep && !ply.Holstering && vert then
-                SimpleHolster()
-                ply.InLadder = true
-            elseif ply:GetMoveType() != MOVETYPE_LADDER && ply.InLadder && !validwep && !ply.Holstering then
-                SimpleHolster()
-                ply.InLadder = false
+            local wepClass = validwep and eGetClass(weapon)
+            local holstered = validwep and eGetClass(weapon) == holster
+            local based = validwep and !holstered and (weapons.IsBasedOn(wepClass, "mg_base") or weapons.IsBasedOn(wepClass, "kf_zed_pill"))
+    
+            if based or plyTable.Holstering then
+                return
             end
-        elseif ply.InLadder then
-            ply.InLadder = false
+    
+            local moveType = eGetMoveType(ply)
+    
+            if moveType == MOVETYPE_LADDER and !plyTable.InLadder and validwep and !plyTable.Holstering and vert then
+                SimpleHolster()
+    
+                plyTable.InLadder = true
+            elseif moveType != MOVETYPE_LADDER and plyTable.InLadder and !validwep and !plyTable.Holstering then
+                SimpleHolster()
+    
+                plyTable.InLadder = false
+            end
+        elseif plyTable.InLadder then
+            plyTable.InLadder = false
         end
     end)
 end
@@ -151,9 +177,20 @@ if SERVER then
     end
     -- || (mdl:SelectWeightedSequence(ACT_SLAM_DETONATOR_THROW_DRAW) != -1 && mdl:SelectWeightedSequence(ACT_SLAM_DETONATOR_THROW_DRAW)) 
 
+    local lastHolster = {}
+
     function DoWeaponHolstering(ply, exc)
         if !IsValid(ply) then return end
-        local weapon, vm, ct = ply:GetActiveWeapon(), ply:GetViewModel(), CurTime()
+
+        local ct = CurTime()
+
+        if !IsValid(ply) or (lastHolster[ply] or 0) + 0.5 >= ct then
+            return
+        end
+    
+        lastHolster[ply] = ct
+
+        local weapon, vm = ply:GetActiveWeapon(), ply:GetViewModel()
         if !ply:HasWeapon(holster) then
             -- print("holster is invalid, giving new one to " .. ply:Nick())
             ply:Give(holster)
@@ -247,8 +284,10 @@ hook.Add("PlayerSwitchWeapon", "HolsterWeaponSwitchHook", function(ply, oldwep, 
     end
 end)
 
+local pAlive = PLAYER.Alive
+
 hook.Add("StartCommand", "SimpleHolsterActionStop", function(ply, ucmd)
-    if ply:Alive() && ply.Holstering then
+    if pAlive(ply) and ply.Holstering then
         ucmd:SetButtons(bit.band(ucmd:GetButtons(), bit.bnot(10241)))
     end
 end)
