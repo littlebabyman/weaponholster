@@ -28,7 +28,7 @@ if CLIENT then
     end)
 
     local HLAZCvar = GetConVar("hlaz_sv_holster")
-    local SSCVar = GetConVar("ss_enableholsterdelay")
+    local SSCVar = GetConVar("ss_sv_holsteranims")
 
     function SimpleHolster()
         local ply = LocalPlayer()
@@ -37,9 +37,9 @@ if CLIENT then
         local vm = ply:GetViewModel()
 
         HLAZCvar = HLAZCvar || GetConVar("hlaz_sv_holster")
-        SSCVar = SSCVar || GetConVar("ss_enableholsterdelay")
+        SSCVar = SSCVar || GetConVar("ss_sv_holsteranims")
         
-        local based = IsValid(weapon) && !(weapon.ArcCW || weapon.ARC9 || weapon.ArcticTacRP || weapon.IsTFAWeapon || weapon.CW20Weapon || weapon.IsFAS2Weapon || weapon.IsUT99Weapon || weapons.IsBasedOn(weapon:GetClass(), "weapon_ss2_base") || weapons.IsBasedOn(weapon:GetClass(), "weapon_ut2004_base") || (weapons.IsBasedOn(weapon:GetClass(), "weapon_hlaz_base") && SSCVar:GetBool()) || (weapons.IsBasedOn(weapon:GetClass(), "weapon_ss_base") && SSCVar:GetBool()))
+        local based = IsValid(weapon) && !(weapon.ArcCW || weapon.ARC9 || weapon.ArcticTacRP || weapon.IsTFAWeapon || weapon.CW20Weapon || weapon.IsFAS2Weapon || weapon.IsUT99Weapon || weapons.IsBasedOn(weapon:GetClass(), "weapon_ss2_base") || weapons.IsBasedOn(weapon:GetClass(), "weapon_ut2004_base") || (weapons.IsBasedOn(weapon:GetClass(), "weapon_hlaz_base") && HLAZCvar:GetBool()) || (weapons.IsBasedOn(weapon:GetClass(), "weapon_ss_base") && SSCVar:GetBool()))
         local t = 0
 
         ply.Holstering = true
