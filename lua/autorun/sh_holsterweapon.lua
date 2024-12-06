@@ -45,7 +45,7 @@ if CLIENT then
         ply.Holstering = true
 
         local hasanim = IsValid(vm) && vm:SelectWeightedSequence(ACT_VM_HOLSTER) != -1
-        if IsValid(vm) && ((LadderCVar:GetBool() && ply.InLadder) || based) then
+        if IsValid(weapon) && IsValid(vm) && ((LadderCVar:GetBool() && ply.InLadder) || based) then
             local anim = hasanim && vm:SelectWeightedSequence(ACT_VM_HOLSTER) || (IsValid(weapon) && weapon:GetClass() == "weapon_slam" && vm:SelectWeightedSequence(ACT_SLAM_DETONATOR_THROW_DRAW) || vm:SelectWeightedSequence(ACT_VM_DRAW))
             t = vm:SequenceDuration(anim) * (hasanim && 1 || 0.5)
         end
@@ -54,7 +54,10 @@ if CLIENT then
 
         timer.Create("holstertimer_client", t, 1, function()
             ply.Holstering = false
-            if LadderCVar:GetBool() && (ply:GetMoveType() == 9 && !ply.InLadder && !IsValid(weapon) || ply:GetMoveType() != 9 && ply.InLadder && IsValid(weapon)) then if game.SinglePlayer() then ply.InLadder = false end return end
+            if LadderCVar:GetBool() && ply:GetMoveType() != MOVETYPE_LADDER && ply.InLadder && !IsValid(weapon) && (ply:Alive() && IsValid(lastweapon)) then
+                input.SelectWeapon(lastweapon)
+                ply.InLadder = false
+            end
             if !IsValid(weapon) || !IsValid(ply:GetActiveWeapon()) then return end
             if weapon == holsterweapon && (ply:Alive() && IsValid(lastweapon)) then
                 input.SelectWeapon(lastweapon)
@@ -116,15 +119,15 @@ if CLIENT then
             end
     
             local moveType = eGetMoveType(ply)
-    
+            
             if moveType == MOVETYPE_LADDER and !plyTable.InLadder and validwep and !plyTable.Holstering and vert then
                 SimpleHolster()
-    
+
                 plyTable.InLadder = true
             elseif moveType != MOVETYPE_LADDER and plyTable.InLadder and !validwep and !plyTable.Holstering then
                 SimpleHolster()
     
-                plyTable.InLadder = false
+                -- plyTable.InLadder = false
             end
         elseif plyTable.InLadder then
             plyTable.InLadder = false
@@ -154,7 +157,7 @@ if SERVER then
             ply:Give(holster)
             if ply:GetActiveWeapon():GetClass() == oldwep && ply:GetWeapon(holster):IsWeapon() then
                 ply:SetActiveWeapon(NULL)
-                ply:SelectWeapon(ply:GetWeapon(holster))
+                ply:SelectWeapon(holster)
             end
             ply:StripWeapon(oldwep)
         end
@@ -201,14 +204,14 @@ if SERVER then
         -- if LadderCVar:GetInt() == 2 then
         -- if IsValid(ply:GetEntityInUse()) && ply:GetEntityInUse():GetClass() == "player_pickup" then return end
         -- print(ply:GetInternalVariable("m_vecLadderNormal"))
-        local hasanim = IsValid(vm) && (vm:SelectWeightedSequence(ACT_VM_HOLSTER) != -1 || vm:LookupSequence("holster") != -1)
+        local hasanim = IsValid(weapon) && IsValid(vm) && (vm:SelectWeightedSequence(ACT_VM_HOLSTER) != -1 || vm:LookupSequence("holster") != -1)
         if ply:GetMoveType() == MOVETYPE_LADDER && ply:GetActiveWeapon() != NULL && ply:GetInternalVariable("m_vecLadderNormal").z < 0.9 then
             local model = vm:GetModel()
             -- local hasanim = vm:SelectWeightedSequence(ACT_VM_HOLSTER) != -1 || vm:LookupSequence("holster") != -1
             local anim = GetAnimation(vm)
             -- print(vm:GetSequence(), vm:GetSequenceName(vm:GetSequence()), vm:SelectWeightedSequence(ACT_VM_HOLSTER), vm:LookupSequence("holster"), anim, hasanim)
+            ply:SelectWeapon(holster)
             if anim == -1 then
-                ply:SelectWeapon(holster)
                 ply:SetActiveWeapon(NULL)
                 ply:DrawViewModel(true)
             else
@@ -235,7 +238,7 @@ if SERVER then
         elseif ply:GetActiveWeapon() == NULL then
             timer.Remove(str)
             ply:DrawViewModel(true)
-            ply:SelectWeapon(ply:GetPreviousWeapon())
+            if IsValid(ply:GetPreviousWeapon()) then ply:SelectWeapon(ply:GetPreviousWeapon():GetClass()) end
             ply:SetSaveValue("m_hLastWeapon", NULL)
         elseif exc || hasanim then
             local anim = vm:LookupSequence("holster") != -1 && vm:LookupSequence("holster") || (vm:SelectWeightedSequence(ACT_VM_HOLSTER) != -1 && vm:SelectWeightedSequence(ACT_VM_HOLSTER) || (vm:SelectWeightedSequence(ACT_SLAM_DETONATOR_THROW_DRAW) != -1 && vm:SelectWeightedSequence(ACT_SLAM_DETONATOR_THROW_DRAW)) || vm:LookupSequence("draw") != -1 && vm:LookupSequence("draw") || vm:SelectWeightedSequence(ACT_VM_DRAW) != -1 && vm:SelectWeightedSequence(ACT_VM_DRAW) || vm:GetSequence())
