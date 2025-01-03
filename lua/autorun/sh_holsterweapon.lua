@@ -77,7 +77,7 @@ if CLIENT then
 
     net.Receive("holstering", function()
         local lp = LocalPlayer()
-        if !IsValid(lp) then return end
+        if !IsValid(lp) || !IsValid(lp:GetViewModel()) then return end
         hook.Run("OnViewModelChanged", lp:GetViewModel())
         if MemoryCVar:GetBool() then lp:SetSaveValue("m_hLastWeapon", lp.HolsterWep || lp:GetPreviousWeapon()) end
     end)
