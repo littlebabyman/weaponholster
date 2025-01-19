@@ -187,7 +187,7 @@ if SERVER then
 
         local ct = CurTime()
 
-        if !IsValid(ply) or (lastHolster[ply] or 0) + 0.5 >= ct then
+        if !IsValid(ply) || (lastHolster[ply] || 0) + 0.5 >= ct then
             return
         end
     
@@ -195,9 +195,8 @@ if SERVER then
 
         local weapon, vm = ply:GetActiveWeapon(), ply:GetViewModel()
         if !ply:HasWeapon(holster) then
-            -- print("holster is invalid, giving new one to " .. ply:Nick())
             ply:Give(holster)
-            -- timer.Simple(t, function() ply:SelectWeapon(holster) end)
+            ply:SelectWeapon(holster)
         end
         local str = "holstertimer" .. ply:EntIndex()
         local t = 0
@@ -280,7 +279,7 @@ hook.Add("PlayerSwitchWeapon", "HolsterWeaponSwitchHook", function(ply, oldwep, 
         if ply:GetMoveType() == MOVETYPE_LADDER && LadderCVar:GetBool() then
             return true
         end
-        if SERVER && game.SinglePlayer() then
+        if SERVER && game.SinglePlayer() && IsValid(ply) then
             net.Start("holstering")
             net.Send(ply)
         end

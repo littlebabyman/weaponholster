@@ -51,7 +51,7 @@ end
 function SWEP:Reload()
     local owner = self:GetOwner()
     if !owner or !owner:IsPlayer() then return end
-    if owner:KeyPressed(IN_RELOAD) or CLIENT and game.SinglePlayer() then
+    if IsFirstTimePredicted() and owner:KeyPressed(IN_RELOAD) or CLIENT and game.SinglePlayer() then
         if game.SinglePlayer() and SERVER then self:CallOnClient("Reload") end
         if CLIENT then
             self.DrawCrosshair = !self.DrawCrosshair
