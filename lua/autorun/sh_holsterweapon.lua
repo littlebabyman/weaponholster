@@ -1,5 +1,6 @@
 local CVarFlags = {FCVAR_ARCHIVE, FCVAR_NOTIFY, FCVAR_REPLICATED}
 local LadderCVar = CreateConVar("holsterweapon_ladders", 1, CVarFlags, "Enable holstering your weapon on ladders.", 0, 1)
+local LadderForceCVar = CreateConVar("holsterweapon_ladders_forceall", 0, CVarFlags, "Force holstering all weapons on ladders.", 0, 1)
 local UndrawCVar = CreateConVar("holsterweapon_undraw", 1, CVarFlags, "Allow playing weapon draw animation backwards, as a fallback.", 0, 1)
 local WeaponCVar = CreateConVar("holsterweapon_weapon", "", CVarFlags, "Weapon to holster to. Invalid weapon returns default holster. Will remove previous holster-weapon on change.")
 local BindCVar = CreateClientConVar("holsterweapon_key", 18, true)
@@ -12,6 +13,8 @@ end
 
 local PLAYER = FindMetaTable("Player")
 
+local weaponOverrides = {gmod_camera = true, gmod_tool = true, weapon_physgun = true}
+
 if CLIENT then
     hook.Add("PopulateToolMenu", "CATAddHolsterOptions", function()
         spawnmenu.AddToolMenuOption("Options", "Chen's Addons", "SimpleHolsterOptions", "Simple Holster", "", "", function(panel)
@@ -19,6 +22,8 @@ if CLIENT then
             panel:AddItem(sv)
             sv:SetName("Server")
             sv:CheckBox("Holstering in ladders", "holsterweapon_ladders")
+            sv:CheckBox("Force holster tools", "holsterweapon_ladders_forceall")
+            sv:ControlHelp("Holsters physics gun, tool gun, and camera on ladders.")
             sv:TextEntry("Holstering weapon", "holsterweapon_weapon")
             sv:Help("Weapon class name to have as the ''the holster'', or leave blank for default (recommended).")
             sv:ControlHelp("Right click a weapon in the spawnmenu and click ''copy to clipboard'' to get its class name.")
@@ -106,13 +111,13 @@ if CLIENT then
     
         local plyTable = eGetTable(ply)
     
-        if (pAlive(ply) and LadderCVar:GetBool()) then
-            local vert = !game.SinglePlayer() and eGetInternalVariable(ply, "m_vecLadderNormal").z <= 0.9 or eGetVelocity(ply).z != 0
-            local weapon = pGetActiveWeapon(ply)
-            local validwep = IsValid(weapon)
-            local wepClass = validwep and eGetClass(weapon)
-            local holstered = validwep and eGetClass(weapon) == holster
-            local based = validwep and !holstered and (weapons.IsBasedOn(wepClass, "mg_base") or weapons.IsBasedOn(wepClass, "kf_zed_pill"))
+        local weapon = pGetActiveWeapon(ply)
+        local validwep = IsValid(weapon)
+        local wepClass = validwep && eGetClass(weapon)
+        if (pAlive(ply) && LadderCVar:GetBool() && (LadderForceCVar:GetBool() || !weaponOverrides[wepClass])) then
+            local vert = !game.SinglePlayer() && eGetInternalVariable(ply, "m_vecLadderNormal").z <= 0.9 or eGetVelocity(ply).z != 0
+            local holstered = validwep && eGetClass(weapon) == holster
+            local based = validwep && !holstered && (weapons.IsBasedOn(wepClass, "mg_base") or weapons.IsBasedOn(wepClass, "kf_zed_pill"))
     
             if based or plyTable.Holstering then
                 return
@@ -120,11 +125,11 @@ if CLIENT then
     
             local moveType = eGetMoveType(ply)
             
-            if moveType == MOVETYPE_LADDER and !plyTable.InLadder and validwep and !plyTable.Holstering and vert then
+            if moveType == MOVETYPE_LADDER && !plyTable.InLadder && validwep && !plyTable.Holstering && vert then
                 SimpleHolster()
 
                 plyTable.InLadder = true
-            elseif moveType != MOVETYPE_LADDER and plyTable.InLadder and !validwep and !plyTable.Holstering then
+            elseif moveType != MOVETYPE_LADDER && plyTable.InLadder && !validwep && !plyTable.Holstering then
                 SimpleHolster()
     
                 -- plyTable.InLadder = false
@@ -289,7 +294,7 @@ end)
 local pAlive = PLAYER.Alive
 
 hook.Add("StartCommand", "SimpleHolsterActionStop", function(ply, ucmd)
-    if pAlive(ply) and ply.Holstering then
+    if pAlive(ply) && ply.Holstering then
         ucmd:SetButtons(bit.band(ucmd:GetButtons(), bit.bnot(10241)))
     end
 end)
