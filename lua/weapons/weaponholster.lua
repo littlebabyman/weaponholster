@@ -31,7 +31,8 @@ end
 
 function SWEP:Deploy()
     local vm = self:GetOwner():GetViewModel()
-    vm:SendViewModelMatchingSequence(vm:LookupSequence("seq_deploy"))
+    if !IsValid(vm) then return end
+    vm:SendViewModelMatchingSequence(vm:LookupSequence("seq_deploy") or -1)
     vm:SetPlaybackRate(0)
     vm:SetCycle(0)
     return true

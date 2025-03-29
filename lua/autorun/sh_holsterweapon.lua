@@ -6,9 +6,10 @@ local WeaponCVar = CreateConVar("holsterweapon_weapon", "", CVarFlags, "Weapon t
 local BindCVar = CreateClientConVar("holsterweapon_key", 18, true)
 local MemoryCVar = CreateClientConVar("holsterweapon_rememberlast", 1, true, true, "Remember the previous weapon you changed from before holstering.", 0, 1)
 local holster = "weaponholster"
+local vt, xd, db = file.Exists("wos/dynabase/registers/vuth_extendedanimations.lua", "LUA"), file.Exists("models/xdreanims/m_anm_base.mdl", "GAME"), file.Exists("models/player/wiltos/anim_dynamic_pointer.mdl", "GAME")
 
 local function GetAnimation(mdl)
-    return (mdl:SelectWeightedSequence(ACT_VM_HOLSTER) != -1 && mdl:SelectWeightedSequence(ACT_VM_HOLSTER) || mdl:LookupSequence("holster") != -1 && mdl:LookupSequence("holster") || mdl:SelectWeightedSequence(ACT_VM_DRAW) != -1 && mdl:SelectWeightedSequence(ACT_VM_DRAW) || mdl:LookupSequence("draw") != -1 && mdl:LookupSequence("draw") || (mdl:SelectWeightedSequence(ACT_SLAM_DETONATOR_THROW_DRAW) != -1 && mdl:SelectWeightedSequence(ACT_SLAM_DETONATOR_THROW_DRAW)) || -1)
+    return mdl:SelectWeightedSequence(ACT_VM_HOLSTER) != -1 && mdl:SelectWeightedSequence(ACT_VM_HOLSTER) || mdl:LookupSequence("holster") != -1 && mdl:LookupSequence("holster") || mdl:SelectWeightedSequence(ACT_VM_DRAW) != -1 && mdl:SelectWeightedSequence(ACT_VM_DRAW) || mdl:LookupSequence("draw") != -1 && mdl:LookupSequence("draw") || (mdl:SelectWeightedSequence(ACT_SLAM_DETONATOR_THROW_DRAW) != -1 && mdl:SelectWeightedSequence(ACT_SLAM_DETONATOR_THROW_DRAW)) || -1
 end
 
 local PLAYER = FindMetaTable("Player")
@@ -82,6 +83,8 @@ if CLIENT then
 
     net.Receive("holstering", function()
         local lp = LocalPlayer()
+        local vec = net.ReadNormal()
+        lp:SetSaveValue("m_vecLadderNormal", vec)
         if !IsValid(lp) || !IsValid(lp:GetViewModel()) then return end
         hook.Run("OnViewModelChanged", lp:GetViewModel())
         if MemoryCVar:GetBool() then lp:SetSaveValue("m_hLastWeapon", lp.HolsterWep || lp:GetPreviousWeapon()) end
@@ -228,6 +231,11 @@ if SERVER then
                 vm:SendViewModelMatchingSequence(anim)
                 vm:SetPlaybackRate(hasanim && 1 || -2)
             end
+            if game.SinglePlayer() && IsValid(ply) then
+                net.Start("holstering")
+                net.WriteNormal(ply:GetInternalVariable("m_vecLadderNormal"))
+                net.Send(ply)
+            end
             -- if ply:GetActiveWeapon() == ply:GetWeapon(holster) then
             --     vm:SetModel(model)
             -- end
@@ -271,6 +279,30 @@ if SERVER then
     end)
 end
 
+if vt && (xd || db) then
+
+    hook.Add("CalcMainActivity", "HolsterWeaponAnimHook", function(ply, vel)
+        if ply:GetMoveType() != MOVETYPE_LADDER then return end
+        if ply:GetActiveWeapon() == NULL then
+            if vel.z > 0 then
+                return ACT_SHIPLADDER_UP, -1
+            elseif vel.z < 0 then
+                return ACT_SHIPLADDER_DOWN, -1
+            end
+            return ACT_VM_IDLE_DEPLOYED_1, -1
+        end
+    end)
+
+
+    hook.Add("UpdateAnimation", "HolsterWeaponAnimHook", function(ply, vel, spd)
+        if ply:GetMoveType() != MOVETYPE_LADDER then return end
+        if ply:GetActiveWeapon() == NULL then
+            local vec = -ply:GetInternalVariable("m_vecLadderNormal")
+            ply:SetRenderAngles(vec:Angle())
+        end
+    end)
+end
+
 hook.Add("PlayerSwitchWeapon", "HolsterWeaponSwitchHook", function(ply, oldwep, newwep)
     -- if newwep:GetClass() == holster then
     --     if CLIENT && !ply.Holstering then
@@ -286,6 +318,7 @@ hook.Add("PlayerSwitchWeapon", "HolsterWeaponSwitchHook", function(ply, oldwep, 
         end
         if SERVER && game.SinglePlayer() && IsValid(ply) then
             net.Start("holstering")
+            net.WriteNormal(ply:GetInternalVariable("m_vecLadderNormal"))
             net.Send(ply)
         end
     end
