@@ -19,9 +19,10 @@ local weaponOverrides = {gmod_camera = true, gmod_tool = true, weapon_physgun = 
 if CLIENT then
     hook.Add("PopulateToolMenu", "CATAddHolsterOptions", function()
         spawnmenu.AddToolMenuOption("Options", "Chen's Addons", "SimpleHolsterOptions", "Simple Holster", "", "", function(panel)
-            local sv = vgui.Create("DForm")
+            local sv, anim = vgui.Create("DForm", panel), vgui.Create("DForm", panel)
             panel:AddItem(sv)
-            sv:SetName("Server")
+            panel:AddItem(anim)
+            sv:SetLabel("Server")
             sv:CheckBox("Holstering in ladders", "holsterweapon_ladders")
             sv:CheckBox("Force holster tools", "holsterweapon_ladders_forceall")
             sv:ControlHelp("Holsters physics gun, tool gun, and camera on ladders.")
@@ -30,6 +31,42 @@ if CLIENT then
             sv:ControlHelp("Right click a weapon in the spawnmenu and click ''copy to clipboard'' to get its class name.")
             sv:CheckBox("Remember last weapons", "holsterweapon_rememberlast")
             sv:CheckBox("Enable ''backwards weapon draw''", "holsterweapon_undraw")
+            anim:SetLabel("Animations")
+            -- anim:Help("Third Person Animations")
+            anim:Help("Buttons open Workshop pages for addons containing extra goodies.\nThese allow player models to use ladder climbing animations, if applicable.")
+            if !vt then
+                local button = vgui.Create("DButton", anim)
+                button:SetText("Extended Player Animations")
+                button.DoClick = function()
+                    gui.OpenURL("https://steamcommunity.com/workshop/filedetails/?id=2922279661")
+                end
+                anim:AddItem(button)
+            else
+                anim:Help("Extended Player Animations is installed!")
+            end
+            if !(xd || db) || (xd && db) then
+                if (xd && db) then
+                    anim:Help("Please, do not have xdReanims and DynaBase installed at the same time!")
+                else
+                    anim:Help("Please, install either xdReanims or Dynabase.")
+                end
+                local button = vgui.Create("DButton", anim)
+                button:SetText("xdReanims")
+                button.DoClick = function()
+                    gui.OpenURL("https://steamcommunity.com/workshop/filedetails/?id=2143558752")
+                end
+                anim:AddItem(button)
+                local button = vgui.Create("DButton", anim)
+                button:SetText("DynaBase")
+                button.DoClick = function()
+                    gui.OpenURL("https://steamcommunity.com/workshop/filedetails/?id=2916561591")
+                end
+                anim:AddItem(button)
+            elseif xd then
+                anim:Help("xdReanims is installed!")
+            elseif db then
+                anim:Help("DynaBase is installed!")
+            end
         end)
     end)
 
