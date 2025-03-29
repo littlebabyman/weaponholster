@@ -335,6 +335,7 @@ if vt && (xd || db) then
         if ply:GetMoveType() != MOVETYPE_LADDER then return end
         if ply:GetActiveWeapon() == NULL then
             local vec = -ply:GetInternalVariable("m_vecLadderNormal")
+            if vec.z < 0.9 then return end
             ply:SetRenderAngles(vec:Angle())
         end
     end)
