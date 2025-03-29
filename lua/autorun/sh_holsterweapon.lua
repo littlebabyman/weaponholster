@@ -155,11 +155,11 @@ if CLIENT then
         local validwep = IsValid(weapon)
         local wepClass = validwep && eGetClass(weapon)
         if (pAlive(ply) && LadderCVar:GetBool() && (LadderForceCVar:GetBool() || !weaponOverrides[wepClass])) then
-            local vert = !game.SinglePlayer() && eGetInternalVariable(ply, "m_vecLadderNormal").z <= 0.9 or eGetVelocity(ply).z != 0
+            local vert = !game.SinglePlayer() && eGetInternalVariable(ply, "m_vecLadderNormal").z <= 0.9 || eGetVelocity(ply).z != 0
             local holstered = validwep && eGetClass(weapon) == holster
-            local based = validwep && !holstered && (weapons.IsBasedOn(wepClass, "mg_base") or weapons.IsBasedOn(wepClass, "kf_zed_pill"))
+            local based = validwep && !holstered && (weapons.IsBasedOn(wepClass, "mg_base") || weapons.IsBasedOn(wepClass, "kf_zed_pill"))
     
-            if based or plyTable.Holstering then
+            if based || plyTable.Holstering then
                 return
             end
     
