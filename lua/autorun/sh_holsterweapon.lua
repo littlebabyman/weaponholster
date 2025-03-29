@@ -122,7 +122,7 @@ if CLIENT then
         local lp = LocalPlayer()
         local vec = net.ReadNormal()
         lp:SetSaveValue("m_vecLadderNormal", vec)
-        if !IsValid(lp) || !IsValid(lp:GetViewModel()) then return end
+        if !IsValid(lp) || !IsValid(lp:GetViewModel()) || lp:GetActiveWeapon() == NULL then return end
         hook.Run("OnViewModelChanged", lp:GetViewModel())
         if MemoryCVar:GetBool() then lp:SetSaveValue("m_hLastWeapon", lp.HolsterWep || lp:GetPreviousWeapon()) end
     end)
@@ -335,7 +335,8 @@ if vt && (xd || db) then
         if ply:GetMoveType() != MOVETYPE_LADDER then return end
         if ply:GetActiveWeapon() == NULL then
             local vec = -ply:GetInternalVariable("m_vecLadderNormal")
-            if vec.z < 0.9 then return end
+            if vec == vector_origin then return end
+            if vec.z > 0.9 then return end
             ply:SetRenderAngles(vec:Angle())
         end
     end)
